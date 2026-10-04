@@ -1,0 +1,12 @@
+<launch>
+  <arg name="ur_type" default="ur5e"/>
+
+  <node pkg="robot_state_publisher" exec="robot_state_publisher">
+    <param name="robot_description" type="str"
+           value="$(command 'xacro $(find-pkg-share barista_description)/urdf/barista.urdf.xacro ur_type:=$(var ur_type)')"/>
+  </node>
+
+  <node pkg="joint_state_publisher_gui" exec="joint_state_publisher_gui"/>
+
+  <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share ur_description)/rviz/view_robot.rviz"/>
+</launch>

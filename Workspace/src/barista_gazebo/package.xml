@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>barista_gazebo</name>
+  <version>0.0.1</version>
+  <description>Barista robot Gazebo simulation.</description>
+  <maintainer email="selmansouri@wpi.com">RBE501 Barista Team</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>barista_description</exec_depend>
+  <exec_depend>ur_simulation_gz</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

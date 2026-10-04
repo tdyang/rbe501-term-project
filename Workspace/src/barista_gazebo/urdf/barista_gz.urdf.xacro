@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="barista">
+  <xacro:arg name="name" default="ur"/>
+  <xacro:arg name="ur_type" default="ur5e"/>
+  <xacro:arg name="tf_prefix" default=""/>
+  <xacro:arg name="simulation_controllers" default=""/>
+
+  <xacro:include filename="$(find barista_description)/urdf/barista_macro.xacro"/>
+  <xacro:include filename="$(find ur_simulation_gz)/urdf/ur_gz.ros2_control.xacro"/>
+
+  <xacro:barista name="$(arg name)" ur_type="$(arg ur_type)" tf_prefix="$(arg tf_prefix)"/>
+
+  <xacro:ur_ros2_control name="$(arg name)" tf_prefix="$(arg tf_prefix)"/>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(arg simulation_controllers)</parameters>
+    </plugin>
+  </gazebo>
+</robot>

@@ -1,0 +1,8 @@
+# colcon / ROS 2 build output
+Workspace/build/
+Workspace/install/
+Workspace/log/
+
+# Python
+__pycache__/
+*.pyc

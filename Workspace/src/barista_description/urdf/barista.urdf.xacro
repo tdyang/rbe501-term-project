@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="barista">
+  <xacro:arg name="name" default="ur"/>
+  <xacro:arg name="ur_type" default="ur5e"/>
+  <xacro:arg name="tf_prefix" default=""/>
+
+  <xacro:include filename="$(find barista_description)/urdf/barista_macro.xacro"/>
+
+  <xacro:barista name="$(arg name)" ur_type="$(arg ur_type)" tf_prefix="$(arg tf_prefix)"/>
+</robot>
