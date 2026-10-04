@@ -1,0 +1,128 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs}
+
+\title{UR5: Manipulability and Inverse Kinematics}
+\author{RBE 501}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+$i$ & $a_i$ [m] & $\alpha_i$ & $d_i$ [m] & $\theta_i$\\
+\midrule
+1 & 0       & $\pi/2$  & $d_1=0.08916$ & $\theta_1$\\
+2 & $a_2=0.425$   & 0 & 0 & $\theta_2$\\
+3 & $a_3=0.39225$ & 0 & 0 & $\theta_3$\\
+4 & 0       & $\pi/2$  & $d_4=0.10915$ & $\theta_4$\\
+5 & 0       & $-\pi/2$ & $d_5=0.09456$ & $\theta_5$\\
+6 & 0       & 0        & $d_6=0.0823$  & $\theta_6$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%=====================================================================
+\section{Manipulability}
+
+\begin{equation}
+  w(\mathbf q)=\sqrt{\det\!\big(J(\mathbf q)\,J(\mathbf q)^{T}\big)}
+  \boxed{\;
+  =a_2\,a_3\,\bigl|\,s_3\bigr|\,\bigl|\,s_5\bigr|\,
+  \bigl|\,a_2 c_2 + a_3 c_{23} + d_5\, s_{234}\bigr|
+  \;}
+\end{equation}
+Numerically, $a_2a_3 = 0.425\times0.39225 = 0.16671\ \text{m}^2$, so
+\begin{equation}
+  w(\mathbf q)=0.16671\,\lvert s_3\rvert\,\lvert s_5\rvert\,
+  \bigl|\,0.425\,c_2 + 0.39225\,c_{23} + 0.09456\,s_{234}\bigr| .
+\end{equation}
+
+\subsection*{Singular configurations ($w=0$)}
+\begin{enumerate}
+  \item \textbf{Elbow singularity:} $s_3=0\;\Rightarrow\;\theta_3=0$ or $\pi$
+        (the arm is fully stretched out or folded back).
+  \item \textbf{Wrist singularity:} $s_5=0\;\Rightarrow\;\theta_5=0$ or $\pi$
+        (the axes of joints 4 and 6 are parallel, so they lose a DoF).
+  \item \textbf{Shoulder singularity:} $a_2c_2+a_3c_{23}+d_5s_{234}=0$
+        (the wrist center lies on the plane containing the axes of joints 1 and 2).
+\end{enumerate}
+
+%=====================================================================
+\section{Inverse Kinematics}
+
+\begin{equation}
+  {}^{0}T_6=\begin{bmatrix}
+    x_x & y_x & z_x & p_x\\
+    x_y & y_y & z_y & p_y\\
+    x_z & y_z & z_z & p_z\\
+    0&0&0&1
+  \end{bmatrix},
+\end{equation}
+
+\paragraph{Joint 1 (shoulder left/right).}
+\begin{equation}
+  {}^{0}\mathbf p_5 = {}^{0}\mathbf p_6 - d_6\,{}^{0}\hat{\mathbf z}_6
+  =\begin{bmatrix}p_x-d_6z_x\\ p_y-d_6z_y\\ p_z-d_6z_z\end{bmatrix},
+\end{equation}
+\begin{equation}
+  \boxed{\;
+  \theta_1=\operatorname{atan2}\!\left({}^{0}p_{5y},\,{}^{0}p_{5x}\right)
+  \pm\cos^{-1}\!\left(\frac{d_4}{\sqrt{{}^{0}p_{5x}^{2}+{}^{0}p_{5y}^{2}}}\right)
+  +\frac{\pi}{2}
+  \;}
+\end{equation}
+This requires $\sqrt{{}^{0}p_{5x}^{2}+{}^{0}p_{5y}^{2}}\ge d_4$.
+
+\paragraph{Joint 5 (wrist up/down).}
+\begin{equation}
+  \boxed{\;
+  \theta_5=\pm\cos^{-1}\!\left(\frac{p_x s_1-p_y c_1-d_4}{d_6}\right)
+  \;}
+\end{equation}
+
+\paragraph{Joint 6.}
+For $s_5\neq0$:
+\begin{equation}
+  \boxed{\;
+  \theta_6=\operatorname{atan2}\!\left(
+    \frac{-y_x s_1 + y_y c_1}{s_5},\;
+    \frac{x_x s_1 - x_y c_1}{s_5}\right)
+  \;}
+\end{equation}
+If $s_5=0$, joints 2, 3, 4 and 6 are parallel. The solution is then
+underdetermined, so $\theta_6$ may be chosen freely.
+
+\paragraph{Joints 2, 3, 4 (planar 3R arm, elbow up/down).}
+\begin{equation}
+  {}^{1}T_4=\left({}^{0}T_1\right)^{-1}\,{}^{0}T_6\,
+            \left({}^{5}T_6\right)^{-1}\left({}^{4}T_5\right)^{-1},
+\end{equation}
+\begin{align}
+  \boxed{\;\theta_3=\pm\cos^{-1}\!\left(
+     \frac{x_{14}^2+y_{14}^2-a_2^2-a_3^2}{2a_2a_3}\right)\;}\\[4pt]
+  \boxed{\;\theta_2=\operatorname{atan2}(y_{14},\,x_{14})
+     -\operatorname{atan2}\!\left(a_3 s_3,\; a_2+a_3c_3\right)\;}\\[4pt]
+  \boxed{\;\theta_4=\operatorname{atan2}\!\left({}^{1}R_{4,21},\,{}^{1}R_{4,11}\right)
+     -\theta_2-\theta_3\;}
+\end{align}
+No solution exists if $\sqrt{x_{14}^2+y_{14}^2}>a_2+a_3$ or
+$\sqrt{x_{14}^2+y_{14}^2}<\lvert a_2-a_3\rvert$.
+
+\subsection*{Solution branches}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Joint & Sign choice & Physical meaning\\
+\midrule
+$\theta_1$ & $\pm\cos^{-1}(\cdot)$ & shoulder left / right\\
+$\theta_5$ & $\pm\cos^{-1}(\cdot)$ & wrist up / down\\
+$\theta_3$ & $\pm\cos^{-1}(\cdot)$ & elbow up / down\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}
