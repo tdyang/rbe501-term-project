@@ -26,7 +26,7 @@
     <joint name="world_to_table" type="fixed">
       <parent link="world"/>
       <child link="table"/>
-      <origin xyz="${-table_x/3} 0 ${table_h}"/>
+      <origin xyz="0 0 ${table_h}"/>
     </joint>
 
     <!-- TODO - table, gripper, cameras -->
