@@ -12,14 +12,21 @@
     <link name="table">
       <visual>
         <origin xyz="${-table_x/3} 0 ${-table_h/2}"/>
-        <geometry><box size="${table_x} ${table_y} ${table_h}"/></geometry>
+
+        <geometry>
+        <box size="${table_x} ${table_y} ${table_h}"/>
+        </geometry>
+
         <material name="wood">
           <color rgba="0.55 0.35 0.2 1"/>
         </material>
       </visual>
+
       <collision>
         <origin xyz="${-table_x/3} 0 ${-table_h/2}"/>
-        <geometry><box size="${table_x} ${table_y} ${table_h}"/></geometry>
+        <geometry>
+          <box size="${table_x} ${table_y} ${table_h}"/>
+        </geometry>
       </collision>
     </link>
 
@@ -29,7 +36,7 @@
       <origin xyz="0 0 ${table_h}"/>
     </joint>
 
-    <!-- TODO - table, gripper, cameras -->
+    <!-- TODO gripper, cameras -->
 
     <xacro:ur_robot
       name="${name}"

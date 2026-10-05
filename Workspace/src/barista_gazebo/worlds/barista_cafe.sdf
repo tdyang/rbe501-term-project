@@ -5,10 +5,10 @@
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
 
-    <light type="directional" name="sun">
+    <!-- <light type="directional" name="sun">
       <pose>0 0 10 0 0 0</pose>
       <direction>-0.5 0.1 -0.9</direction>
-    </light>
+    </light> -->
 
     <model name="ground_plane">
       <static>true</static>
@@ -22,6 +22,16 @@
       </link>
     </model>
 
-    <!-- TODO: counter, cups, coffee machine -->
+    <!--
+    <include>
+      <uri>model://cup</uri>
+      <pose>-0.5 -0.3 0.751 0 0 0</pose>
+    </include>
+
+    <include>
+      <uri>model://pitcher</uri>
+      <pose>-0.5 0.3 0.751 0 0 0</pose>
+    </include>
+    -->
   </world>
 </sdf>

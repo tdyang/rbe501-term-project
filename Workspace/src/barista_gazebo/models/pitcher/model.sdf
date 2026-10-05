@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<sdf version="1.11">
+  <model name="pitcher">
+    <link name="link">
+      <inertial auto="true"/>
+
+      <collision name="collision">
+        <density>7900</density>
+        <geometry>
+          <mesh optimization="convex_decomposition">
+            <uri>model://pitcher/pitcher.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <mesh>
+          <uri>model://pitcher/pitcher.stl</uri></mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>
