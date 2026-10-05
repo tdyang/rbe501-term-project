@@ -3,14 +3,38 @@
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 
   <xacro:macro name="barista" params="name ur_type tf_prefix">
+    <xacro:property name="table_h" value="0.75"/>
+    <xacro:property name="table_x" value="1.5"/>
+    <xacro:property name="table_y" value="2"/>
+    <xacro:property name="table_m" value="30.0"/>
     <link name="world"/>
+
+    <link name="table">
+      <visual>
+        <origin xyz="${-table_x/3} 0 ${-table_h/2}"/>
+        <geometry><box size="${table_x} ${table_y} ${table_h}"/></geometry>
+        <material name="wood">
+          <color rgba="0.55 0.35 0.2 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="${-table_x/3} 0 ${-table_h/2}"/>
+        <geometry><box size="${table_x} ${table_y} ${table_h}"/></geometry>
+      </collision>
+    </link>
+
+    <joint name="world_to_table" type="fixed">
+      <parent link="world"/>
+      <child link="table"/>
+      <origin xyz="${-table_x/3} 0 ${table_h}"/>
+    </joint>
 
     <!-- TODO - table, gripper, cameras -->
 
     <xacro:ur_robot
       name="${name}"
       tf_prefix="${tf_prefix}"
-      parent="world"
+      parent="table"
       joint_limits_parameters_file="$(find ur_description)/config/${ur_type}/joint_limits.yaml"
       kinematics_parameters_file="$(find ur_description)/config/${ur_type}/default_kinematics.yaml"
       physical_parameters_file="$(find ur_description)/config/${ur_type}/physical_parameters.yaml"
