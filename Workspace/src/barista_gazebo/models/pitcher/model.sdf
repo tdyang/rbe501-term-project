@@ -5,18 +5,24 @@
       <inertial auto="true"/>
 
       <collision name="collision">
-        <density>7900</density>
+        <density>1300</density>
         <geometry>
           <mesh optimization="convex_decomposition">
-            <uri>model://pitcher/pitcher.stl</uri>
+            <uri>model://pitcher/rbe501_pitcher.stl</uri>
           </mesh>
         </geometry>
       </collision>
 
       <visual name="visual">
+        <material>
+          <ambient>0.7 0.7 0.75</ambient>
+          <diffuse>0.7 0.7 0.75</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+
         <geometry>
           <mesh>
-          <uri>model://pitcher/pitcher.stl</uri></mesh>
+          <uri>model://pitcher/rbe501_pitcher.stl</uri></mesh>
         </geometry>
       </visual>
     </link>

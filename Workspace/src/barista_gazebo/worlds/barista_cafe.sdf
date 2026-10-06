@@ -14,7 +14,9 @@
       <static>true</static>
       <link name="link">
         <collision name="collision">
-          <geometry><plane><normal>0 0 1</normal></plane></geometry>
+          <geometry><plane>
+            <normal>0 0 1</normal>
+          </plane></geometry>
         </collision>
         <visual name="visual">
           <geometry><plane><normal>0 0 1</normal><size>20 20</size></plane></geometry>
@@ -22,16 +24,16 @@
       </link>
     </model>
 
-    <!--
+    
     <include>
       <uri>model://cup</uri>
-      <pose>-0.5 -0.3 0.751 0 0 0</pose>
+      <pose>-0.5 -0.3 0.751 0 0 3.14</pose>
     </include>
 
     <include>
       <uri>model://pitcher</uri>
-      <pose>-0.5 0.3 0.751 0 0 0</pose>
+      <pose>-0.5 0.3 0.751 0 0 3.14</pose>
     </include>
-    -->
+   
   </world>
 </sdf>

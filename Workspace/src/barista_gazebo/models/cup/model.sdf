@@ -5,18 +5,23 @@
       <inertial auto="true"/>
 
       <collision name="collision">
-        <density>2400</density>
+        <density>1220</density>
         <geometry>
           <mesh optimization="convex_decomposition">
-            <uri>model://cup/cup.stl</uri>
+            <uri>model://cup/rbe501_mug.stl</uri>
           </mesh>
         </geometry>
       </collision>
 
       <visual name="visual">
+        <material>
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1 </diffuse>
+        </material>
+
         <geometry>
           <mesh>
-            <uri>model://cup/cup.stl</uri>
+            <uri>model://cup/rbe501_mug.stl</uri>
           </mesh>
         </geometry>
       </visual>
