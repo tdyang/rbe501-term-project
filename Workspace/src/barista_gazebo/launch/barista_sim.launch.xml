@@ -6,4 +6,9 @@
     <arg name="description_file" value="$(find-pkg-share barista_gazebo)/urdf/barista_gz.urdf.xacro"/>
     <arg name="world_file" value="$(find-pkg-share barista_gazebo)/worlds/barista_cafe.sdf --gui-config $(find-pkg-share barista_gazebo)/config/gui.config"/>
   </include>
+
+  <!-- Load the ros gazebo bridge -->
+  <node pkg="ros_gz_bridge" exec="parameter_bridge" name="barista_bridge" output="screen">
+    <param name="config_file" value="$(find-pkg-share barista_gazebo)/config/bridge.yaml"/>
+  </node>
 </launch>

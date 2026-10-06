@@ -7,4 +7,5 @@
   <xacro:include filename="$(find barista_description)/urdf/barista_macro.xacro"/>
 
   <xacro:barista name="$(arg name)" ur_type="$(arg ur_type)" tf_prefix="$(arg tf_prefix)"/>
+
 </robot>

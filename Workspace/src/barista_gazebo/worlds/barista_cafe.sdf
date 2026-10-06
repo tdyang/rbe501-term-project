@@ -27,12 +27,12 @@
     
     <include>
       <uri>model://cup</uri>
-      <pose>-0.5 -0.3 0.751 0 0 3.14</pose>
+      <pose>-1 -0.3 0.751 0 0 3.14</pose>
     </include>
 
     <include>
       <uri>model://pitcher</uri>
-      <pose>-0.5 0.3 0.751 0 0 3.14</pose>
+      <pose>-1 0.3 0.751 0 0 3.14</pose>
     </include>
    
   </world>

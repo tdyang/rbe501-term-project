@@ -36,7 +36,7 @@
       <origin xyz="0 0 ${table_h}"/>
     </joint>
 
-    <!-- TODO gripper, cameras -->
+    <!-- TODO gripper?, cameras -->
 
     <xacro:ur_robot
       name="${name}"
