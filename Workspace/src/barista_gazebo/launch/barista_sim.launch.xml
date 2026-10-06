@@ -4,6 +4,6 @@
   <include file="$(find-pkg-share ur_simulation_gz)/launch/ur_sim_control.launch.py">
     <arg name="ur_type" value="$(var ur_type)"/>
     <arg name="description_file" value="$(find-pkg-share barista_gazebo)/urdf/barista_gz.urdf.xacro"/>
-    <arg name="world_file" value="$(find-pkg-share barista_gazebo)/worlds/barista_cafe.sdf"/>
+    <arg name="world_file" value="$(find-pkg-share barista_gazebo)/worlds/barista_cafe.sdf --gui-config $(find-pkg-share barista_gazebo)/config/gui.config"/>
   </include>
 </launch>
