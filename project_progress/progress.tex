@@ -4,16 +4,16 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{cite}
- 
+
 \begin{document}
- 
+
 \title{Dynamic-Payload Pick-and-Pour Control for a UR5 Barista Robot:\\
-Progress Report}
- 
+    Progress Report}
+
 \author{\IEEEauthorblockN{Soumaya El Mansouri, Jingxuan Yang, Tracy Yang}
-\IEEEauthorblockA{RBE 501, Worcester Polytechnic Institute\\
-Worcester, MA, USA}}
- 
+    \IEEEauthorblockA{RBE 501, Worcester Polytechnic Institute\\
+        Worcester, MA, USA}}
+
 \maketitle
 
 %==========================================================
@@ -22,69 +22,89 @@ Worcester, MA, USA}}
 
 \subsection{Problem Description}
 % TODO: expand on problem description (soumaya)
+
 \subsection{Related Work}
- 
+
+Our task combines three problems that the literature has mostly treated
+separately: modelling the arm itself, perceiving how much liquid has been
+poured, and deciding how to pour. We organize prior work around these problems
+and, for each paper, state what we take from it and what we change.
+
 \textbf{UR5 modelling.}
-Kebria et al.\ \cite{kebria2016} provide a complete set of kinematic and dynamic models for the UR5, 
-including DH parameters, closed-form forward and inverse kinematics, the inertia, Coriolis, and 
-gravity terms from the Lagrangian formulation, and a SimMechanics model. They validate the model with 
-a PD controller using feedback linearization. Their dynamics assume a fixed payload, which is the 
-assumption we relax, and their model forms the basis of our kinematic and dynamic equations in 
-Section~\ref{sec:method}.
- 
+Kebria et al.\ \cite{kebria2016} derive the DH parameters, closed-form forward and inverse kinematics, 
+and the Lagrangian dynamics (inertia, Coriolis, and gravity terms) of the UR5, and they verify the 
+model in SimMechanics with a PD controller using feedback linearization. This is the most direct 
+foundation for our project. Using these equations, we compute the Jacobian, manipulability, and joint 
+torques along the pick-and-pour trajectory, and we use their DH table and inverse-kinematics as our 
+starting point. The limitation is that their dynamics assume constant link and payload parameters. 
+In our task, the arm holds a container that loses mass throughout the pour, so a controller built on 
+their model with a fixed payload would see a changing gravity and inertia load as an unmodelled 
+disturbance.
+
 \textbf{Vision-based liquid volume estimation.}
-Schober et al.\ \cite{schober2024} estimate the liquid volume in transparent laboratory containers 
-from a single RGB image using a two-step CNN, then execute pouring trajectories selected from a 
-physics simulation on a UR5e. Their pouring strategy rotates the container about a fixed liquid 
-exit point, which suits small openings. Their end-to-end errors were large (RMSE of 21--26\,mL for 
-30--50\,mL targets), and the authors note that volume-estimation and simulation errors accumulate, 
-making the system unsuitable for precise work. This motivates adding a direct measurement of the 
-poured mass, which we obtain from a scale, instead of relying on vision alone.
- 
+Schober et al.\ \cite{schober2024} estimate the liquid volume in transparent containers from a single 
+RGB image and then execute a pouring motion selected from a simulation on a UR5e. Their pouring strategy 
+of rotating the container about a fixed liquid exit point is useful for the small opening of a coffee 
+container. Their results, however, show why vision alone is not enough for our task: the complete pipeline 
+had RMSE of 21--26\,mL for 30--50\,mL targets, and the authors note that volume-estimation and simulation 
+errors add up so the setup is not precise enough for laboratory use. Because a pour is selected before it 
+starts and then executed without feedback, an error in the volume estimate cannot be corrected during the pour. 
+We therefore use the camera only to localize the mug and container for grasping and placing, and we take the 
+poured amount from a scale, which gives a direct measurement that can be used to stop the pour.
+
 \textbf{Force/torque perception of liquids.}
-Luo et al.\ \cite{luo2024} use a wrist-mounted force/torque sensor on a UR5e to push a whisk 
-through pancake batter, inferring uniformity, liquid level, and water--flour ratio from the 
-resistance torque. They then pour with open-loop control at a constant wrist angular speed and an 
-MLP that sets the arm speed to achieve a desired stroke width. Their work shows that a wrist force
-/torque sensor carries useful information about the liquid, but their pouring is open loop and uses 
-a single fixed pouring motion, so it does not adapt to the measured amount poured.
- 
+Luo et al.\ \cite{luo2024} use a wrist-mounted force/torque sensor on a UR5e to push a whisk through pancake 
+batter and infer its uniformity, liquid level, and water-flour ratio from the resistance torque. They then 
+pour by rotating the wrist at a constant angular speed and use a learned model to set the arm speed from the 
+batter properties. This matters for us for two reasons. First, it shows that a wrist force/torque sensor on 
+this class of arm gives measurements precise enough to be useful (liquid level within about 3--4\% error). 
+Second, it uses the sensor at the same location we plan to, which supports using it to track the weight of the 
+container in the gripper as it empties. Their pour, however, is open loop with respect to the amount poured: 
+the properties are measured before pouring, and nothing is measured during the pour to decide when to stop. 
+We close this loop by feeding the sensor and scale measurements back into both the stopping decision and the 
+controller.
+
 \textbf{Learned pouring policies.}
-Babaians et al.\ \cite{babaians2022} train PourNet, a reinforcement-learning policy (PPO with an 
-intrinsic curiosity module and curriculum learning) in a Unity3D/NVIDIA Flex simulator, and execute 
-the resulting end-effector motion through a nonlinear MPC planner on a Kinova Movo. A force/torque 
-sensor on the second arm measures the weight in the target container, and the policy generalizes 
-across liquids and containers without real-world fine-tuning, with deviations of roughly 2--9\,g. 
-The approach needs large amounts of simulated training and treats the pour as an end-effector 
-planning problem rather than analyzing the arm's own kinematics and dynamics under a changing load.
- 
+Babaians et al.\ \cite{babaians2022} train PourNet, a reinforcement-learning policy with curiosity-based 
+exploration and curriculum learning in simulation, and execute its motion on a Kinova Movo with a nonlinear 
+model predictive controller. It is the work closest to ours in goal. Its second arm holds the target container 
+and measures its weight with a force/torque sensor, and the pour is based on this feedback, with deviations of 
+a few grams across liquids. It also gives a practical recipe for the measurement itself using an IMU for 
+gravity compensation and a low-pass filter on the force/torque signal (1\,Hz cut-off), which we can adapt for 
+our scale and wrist sensor. The cost is that the policy needs millions of simulated training steps and treats 
+the pour as end-effector planning, so it does not model how the arm's own dynamics change as the held container 
+loses mass. For a course project with limited simulation time, a model-based controller whose structure is 
+known and which can be analyzed with the Jacobian and manipulability tools from class is a better fit than a 
+trained policy.
+
 \textbf{Comparison and our approach.}
-Table~\ref{tab:compare} summarizes how these works differ from ours. Vision-based approaches 
-\cite{schober2024} are flexible but imprecise, haptic approaches \cite{luo2024} perceive liquid 
-properties but pour open loop, and learned policies \cite{babaians2022} achieve good accuracy but 
-need extensive training and do not model the arm's changing dynamics. Detailed UR5 models 
-\cite{kebria2016} exist but assume a constant payload. Our work uses the UR5 model from 
-\cite{kebria2016} and extends it with a time-varying payload mass. We fuse a camera, a scale, and 
-a wrist force/torque sensor for feedback, and we use a model-based controller that compensates for 
- changing load. We simulate the full pick-up-and-pour sequence in ROS2 and Gazebo and study 
- manipulability and singularities along the trajectory.
- 
+Table~\ref{tab:compare} compares these works with ours. Taken together, the prior work establishes (i) a 
+complete UR5 model \cite{kebria2016}, (ii) that vision alone is too imprecise for the poured amount 
+\cite{schober2024}, (iii) that wrist force/torque sensing carries useful information about the liquid 
+\cite{luo2024}, and (iv) that weight feedback from the target container gives accurate pours 
+\cite{babaians2022}. What none of them does is model the arm carrying a payload whose mass changes during 
+the pour and design the controller around it. Our work fills this gap: we extend the UR5 model of 
+\cite{kebria2016} with a time-varying payload, combine a camera (object localization), a scale (poured 
+mass), and a wrist force/torque sensor (payload mass) for feedback, and use a model-based controller that 
+compensates for the changing load. We evaluate this on the complete pick-up-and-pour sequence in ROS2 and 
+Gazebo and examine manipulability and singularities along the trajectory.
+
 \begin{table}[t]
-\caption{Comparison of related work and this project}
-\label{tab:compare}
-\centering
-\small
-\begin{tabular}{@{}p{1.5cm}p{1.9cm}p{1.9cm}p{1.9cm}@{}}
-\toprule
-Work & Sensing & Pour control & Time-varying load modelled \\
-\midrule
-\cite{kebria2016} & -- & PD tracking & No \\
-\cite{schober2024} & RGB camera & Simulation-selected & No \\
-\cite{luo2024} & Wrist F/T & Open-loop & No \\
-\cite{babaians2022} & F/T (weight) & RL + NMPC & Learned implicitly \\
-\textbf{Ours} & Camera, scale, wrist F/T & Model-based, dynamic load & Yes \\
-\bottomrule
-\end{tabular}
+    \caption{Comparison of related work and this project}
+    \label{tab:compare}
+    \centering
+    \small
+    \begin{tabular}{@{}p{1.5cm}p{1.9cm}p{1.9cm}p{1.9cm}@{}}
+        \toprule
+        Work                & Sensing                  & Pour control                     & Time-varying load modelled \\
+        \midrule
+        \cite{kebria2016}   & --                       & PD tracking                      & No                         \\
+        \cite{schober2024}  & RGB camera               & Simulation-selected, no feedback & No                         \\
+        \cite{luo2024}      & Wrist F/T                & Open-loop                        & No                         \\
+        \cite{babaians2022} & F/T (weight of target)   & RL + NMPC                        & Learned implicitly         \\
+        \textbf{Ours}       & Camera, scale, wrist F/T & Model-based, dynamic load        & Yes                        \\
+        \bottomrule
+    \end{tabular}
 \end{table}
 
 %==========================================================
@@ -104,19 +124,19 @@ Work & Sensing & Pour control & Time-varying load modelled \\
 
 %==========================================================
 \begin{thebibliography}{1}
- 
-\bibitem{kebria2016}
-P.~M. Kebria, S.~Al-Wais, H.~Abdi, and S.~Nahavandi, ``Kinematic and dynamic modelling of UR5 manipulator,'' in \emph{Proc. IEEE Int. Conf. Systems, Man, and Cybernetics (SMC)}, Budapest, Hungary, 2016, pp. 4229--4234.
- 
-\bibitem{schober2024}
-D.~Schober, R.~G{\"u}ldenring, J.~Love, and L.~Nalpantidis, ``Vision-based robot manipulation of transparent liquid containers in a laboratory setting,'' arXiv:2404.16529, 2024.
- 
-\bibitem{luo2024}
-X.~Luo, S.~Jin, H.-J. Huang, and W.~Yuan, ``An intelligent robotic system for perceptive pancake batter stirring and precise pouring,'' arXiv:2407.01755, 2024.
- 
-\bibitem{babaians2022}
-E.~Babaians, T.~Sharma, M.~Karimi, S.~Sharifzadeh, and E.~Steinbach, ``PourNet: Robust robotic pouring through curriculum and curiosity-based reinforcement learning,'' in \emph{Proc. IEEE/RSJ Int. Conf. Intelligent Robots and Systems (IROS)}, Kyoto, Japan, 2022, pp. 9332--9339.
- 
+
+    \bibitem{kebria2016}
+    P.~M. Kebria, S.~Al-Wais, H.~Abdi, and S.~Nahavandi, ``Kinematic and dynamic modelling of UR5 manipulator,'' in \emph{Proc. IEEE Int. Conf. Systems, Man, and Cybernetics (SMC)}, Budapest, Hungary, 2016, pp. 4229--4234.
+
+    \bibitem{schober2024}
+    D.~Schober, R.~G{\"u}ldenring, J.~Love, and L.~Nalpantidis, ``Vision-based robot manipulation of transparent liquid containers in a laboratory setting,'' arXiv:2404.16529, 2024.
+
+    \bibitem{luo2024}
+    X.~Luo, S.~Jin, H.-J. Huang, and W.~Yuan, ``An intelligent robotic system for perceptive pancake batter stirring and precise pouring,'' arXiv:2407.01755, 2024.
+
+    \bibitem{babaians2022}
+    E.~Babaians, T.~Sharma, M.~Karimi, S.~Sharifzadeh, and E.~Steinbach, ``PourNet: Robust robotic pouring through curriculum and curiosity-based reinforcement learning,'' in \emph{Proc. IEEE/RSJ Int. Conf. Intelligent Robots and Systems (IROS)}, Kyoto, Japan, 2022, pp. 9332--9339.
+
 \end{thebibliography}
 
 \end{document}
