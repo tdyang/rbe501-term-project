@@ -7,6 +7,6 @@ Workspace/log/
 __pycache__/
 *.pyc
 
-.log
-.syntex.gz
-.aux
+*.log
+*.synctex.gz
+*.aux
