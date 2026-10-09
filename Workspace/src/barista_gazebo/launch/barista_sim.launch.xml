@@ -1,5 +1,5 @@
 <launch>
-  <arg name="ur_type" default="ur5e"/>
+  <arg name="ur_type" default="ur5"/>
 
   <include file="$(find-pkg-share ur_simulation_gz)/launch/ur_sim_control.launch.py">
     <arg name="ur_type" value="$(var ur_type)"/>

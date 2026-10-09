@@ -21,7 +21,13 @@
 %==========================================================
 
 \subsection{Problem Description}
-% TODO: expand on problem description (soumaya)
+Pouring is a common manipulation task in food service, laboratory work, and households. Despite this, 
+pouring and handling liquid remains difficult for robotic arms. As liquid leaves the container, the payload 
+held by the arm both loses mass and shifts as the liquid moves. This requires the controller for this task to 
+take into account fluid movement, and dynamic payload, which drastically increases the complexity of a pick and place task. 
+In addition, a poor grasp or inadequate sensing of the poured amount can lead to spills or an overfilled cup.
+
+This project addresses changing payload and the sensing problem for a UR5 manipulator simulated in ROS2 and Gazebo Harmonic.
 
 \subsection{Related Work}
 
@@ -112,7 +118,61 @@ Gazebo and examine manipulability and singularities along the trajectory.
 \label{sec:method}
 %==========================================================
 \subsection{Robot Sequence}
-% TODO: robot sequence/pipeline (soumaya)
+\subsection{Robot Sequence}
+The test sequence is a complete beverage-preparation task in which the arm
+carries three different payloads: an empty mug, a pitcher whose mass
+decreases during the pour, and a filled mug. The workspace consists of a
+table holding the mug, the pitcher of coffee, and a scale. Starting from a
+fixed home configuration clear of the table, the arm performs the following
+steps:
+
+[\textbf{INSERT GAZEBO IMAGES}]
+\begin{enumerate}
+    \item \textit{Mug pick-up:} the camera localizes the mug
+          and the arm grasps it.
+    \item \textit{Mug placement:} the arm places the mug on the scale and
+          releases it.
+    \item \textit{Pitcher pick-up:} the camera localizes the pitcher, the arm
+          grasps it, and the wrist force/torque sensor measures its initial
+          mass.
+    \item \textit{Pour:} the arm positions the pitcher above the mug and tilts
+          it. Throughout the pour, the payload mass estimated from the wrist
+          sensor is passed to ends when the
+          scale reports the target mass, at which point the arm returns the
+          pitcher upright.
+    \item \textit{Pitcher return:} the arm sets the empty pitcher down on the
+          table and releases
+    \item \textit{Serving:} the arm grasps the filled mug and places it at a
+          serving location.
+\end{enumerate}
+Each grasp follows the same pe-grasp pose near
+the object, approaches it, grasps it, and lifts it clear of the surface. 
+
+\subsection{Pipeline}
+The system is implemented in ROS~2 Jazzy with Gazebo Harmonic. The
+simulation contains the UR5 arm, the table with the mug, pitcher, and
+scale, a camera, and a wrist force/torque sensor; the arm is driven through
+\texttt{ros2\_control}, and the remaining simulator topics are exchanged
+with ROS~2 through \texttt{ros\_gz\_bridge}. The pipeline consists of four
+stages:
+\begin{enumerate}
+    \item \textit{Perception:} the camera provides the poses of the mug and
+          pitcher, the wrist force/torque sensor provides the mass of the
+          grasped object, and the scale provides the mass poured into the
+          mug.
+    \item \textit{Task sequencing:} a state machine steps through the
+          sequence above, deciding when to grasp, release, and stop the pour
+          based on the perception outputs.
+    \item \textit{Motion planning:} for each step, inverse kinematics
+          converts the target end-effector poses into joint configurations,
+          which are interpolated into a joint trajectory.
+    \item \textit{Control:} the controller tracks this trajectory using the
+          dynamic model with the current payload estimate, and its commands
+          are sent to the simus2\_control}.
+\end{enumerate}
+Joint states from the measurements
+are fed back to the controller and the state machine at each control step.
+[\textbf{maybe make flow chart?}]
 
 \subsection{Kinematic Model}
 % TODO: equations (submit your model equations with all variables and parameters clearly defined) (tracy and jingxuan)
