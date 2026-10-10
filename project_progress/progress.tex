@@ -157,19 +157,22 @@ scale, a camera, and a wrist force/torque sensor; the arm is driven through
 with ROS~2 through \texttt{ros\_gz\_bridge}. The pipeline consists of four
 stages:
 \begin{enumerate}
-    \item \textit{Perception:} the camera provides the poses of the mug and
-          pitcher, the wrist force/torque sensor provides the mass of the
-          grasped object, and the scale provides the mass poured into the
-          mug.
     \item \textit{Task sequencing:} a state machine steps through the
-          sequence above, deciding when to grasp, release, and stop the pour
-          based on the perception outputs.
+            sequence above, deciding when to grasp, release, and stop the pour
+            based on the sensing outputs.
     \item \textit{Motion planning:} for each step, inverse kinematics
-          converts the target end-effector poses into joint configurations,
-          which are interpolated into a joint trajectory.
-    \item \textit{Control:} the controller tracks this trajectory using the
-          dynamic model with the current payload estimate, and its commands
-          are sent to the simus2\_control}.
+            converts the target end-effector poses into joint configurations,
+            which are interpolated into a joint trajectory.
+    \item \textit{Control:} the controller tracks this trajectory. 
+            The arm's dynamic model is updated with
+            the payload mass from the force/torque sensor, so the
+            controller compensates for the pitcher's weight as it changes
+            during the pour.
+    \item \textit{Sensing:} three sensors observe the task. The camera
+            estimates the poses of the mug and pitcher, the wrist
+            force/torque sensor estimates the mass of the grasped object,
+            and the scale measures the mass poured into the mug. The joint
+            encoders report the arm's joint positions and velocities.
 \end{enumerate}
 Joint states from the measurements
 are fed back to the controller and the state machine at each control step as seen in Figure~\ref{fig:pipeline}.
