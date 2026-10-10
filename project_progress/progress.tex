@@ -4,6 +4,8 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 
 \begin{document}
 
@@ -118,7 +120,6 @@ Gazebo and examine manipulability and singularities along the trajectory.
 \label{sec:method}
 %==========================================================
 \subsection{Robot Sequence}
-\subsection{Robot Sequence}
 The test sequence is a complete beverage-preparation task in which the arm
 carries three different payloads: an empty mug, a pitcher whose mass
 decreases during the pour, and a filled mug. The workspace consists of a
@@ -145,7 +146,7 @@ steps:
     \item \textit{Serving:} the arm grasps the filled mug and places it at a
           serving location.
 \end{enumerate}
-Each grasp follows the same pe-grasp pose near
+Each grasp follows the same pre-grasp pose near
 the object, approaches it, grasps it, and lifts it clear of the surface. 
 
 \subsection{Pipeline}
@@ -171,11 +172,116 @@ stages:
           are sent to the simus2\_control}.
 \end{enumerate}
 Joint states from the measurements
-are fed back to the controller and the state machine at each control step.
-[\textbf{maybe make flow chart?}]
+are fed back to the controller and the state machine at each control step as seen in Figure~\ref{fig:pipeline}.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  node distance=5mm,
+  blk/.style={draw, rounded corners=2pt, align=center, minimum height=8mm, text width=2.7cm, fill=blue!6},
+  sim/.style={draw, rounded corners=2pt, align=center, minimum height=8mm, text width=2.7cm, fill=gray!15},
+  arr/.style={-{Latex[length=2mm]}, thick},
+  fb/.style={-{Latex[length=2mm]}, thick, dashed}
+]
+\node[blk] (seq) {\textbf{Task sequencing}\\state machine};
+\node[blk, below=of seq] (plan) {\textbf{Motion planning}\\IK + joint trajectory};
+\node[blk, below=of plan] (ctrl) {\textbf{Control}\\dynamic model with\\payload estimate};
+\node[sim, below=of ctrl] (sim) {\textbf{UR5 in Gazebo}\\\texttt{ros2\_control},\\simulated sensors};
+\node[blk, below=of sim] (perc) {\textbf{Perception}\\camera, wrist F/T,\\scale};
+
+\draw[arr] (seq) -- node[right, xshift=1pt]{target poses} (plan);
+\draw[arr] (plan) -- node[right, xshift=1pt]{$\mathbf{q}_d(t)$} (ctrl);
+\draw[arr] (ctrl) -- node[right, xshift=1pt]{$\boldsymbol{\tau}$} (sim);
+\draw[arr] (sim) -- node[right, xshift=1pt]{sensor data} (perc);
+
+% perception to task sequencing
+\draw[arr] (perc.east) -- ++(0.55,0) |- (seq.east);
+\node[right, align=left] at ([xshift=0.6cm,yshift=-0.6cm]seq.east) {poses,\\masses};
+
+% joint states back to controller and state machine
+\draw[fb] (sim.west) -- ++(-0.55,0) |- node[pos=0.1, left, align=right]{$\mathbf{q},\dot{\mathbf{q}}$} (ctrl.west);
+\draw[fb] (ctrl.west)++(-0.55,0) |- (seq.west);
+\end{tikzpicture}
+\caption{Control pipeline. Solid arrows show the forward flow of commands and data between stages; dashed arrows show joint-state feedback from the robot.}
+\label{fig:pipeline}
+\end{figure}
 
 \subsection{Kinematic Model}
 % TODO: equations (submit your model equations with all variables and parameters clearly defined) (tracy and jingxuan)
+\subsubsection{Parameters and Conventions}
+All kinematics modules share one parameter file, \texttt{ur5\_params.py}. We use the manufacturer's 
+DH table (Table~\ref{tab:dh}), whose negative $a_2$ and $a_3$ match the joint angles reported by 
+the UR controller; Kebria et al.~\cite{kebria2016} list them as positive, which describes a mirrored 
+arm. Frames $\{0\}$ and $\{6\}$ are the ROS \texttt{base} and \texttt{tool0} frames. The home position, 
+with the arm pointing straight up, is $\mathbf q_{\text{home}}=[0,-\tfrac{\pi}{2},0,-\tfrac{\pi}{2},0,0]^T$.
+
+\begin{table}[t]
+    \caption{UR5 DH parameters (\texttt{ur5\_params.py})}
+    \label{tab:dh}
+    \centering
+    \small
+    \begin{tabular}{@{}ccccc@{}}
+        \toprule
+        $i$ & $a_i$ [m]  & $\alpha_i$ & $d_i$ [m]  & $\theta_i$ \\
+        \midrule
+        1   & 0          & $\pi/2$    & $0.08916$  & $\theta_1$ \\
+        2   & $-0.425$   & 0          & 0          & $\theta_2$ \\
+        3   & $-0.39225$ & 0          & 0          & $\theta_3$ \\
+        4   & 0          & $\pi/2$    & $0.10915$  & $\theta_4$ \\
+        5   & 0          & $-\pi/2$   & $0.09465$  & $\theta_5$ \\
+        6   & 0          & 0          & $0.0823$   & $\theta_6$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{Inverse Kinematics}
+\texttt{inverse\_kinematics.py} implements the closed-form solution of~\cite{kebria2016}. For a 
+desired pose ${}^{0}T_6$ with tool axes $\hat{\mathbf x},\hat{\mathbf y},\hat{\mathbf z}$ and 
+position $\mathbf p$, the wrist center $\mathbf p_5=\mathbf p-d_6\hat{\mathbf z}$ gives
+\begin{align}
+    \theta_1 &= \operatorname{atan2}(p_{5y},p_{5x})
+      \pm\cos^{-1}\!\frac{d_4}{\sqrt{p_{5x}^2+p_{5y}^2}}+\frac{\pi}{2},\\
+    \theta_5 &= \pm\cos^{-1}\!\frac{p_x s_1-p_y c_1-d_4}{d_6},\\
+    \theta_6 &= \operatorname{atan2}\!\Big(
+        \frac{-\hat y_x s_1+\hat y_y c_1}{s_5},\;
+        \frac{\hat x_x s_1-\hat x_y c_1}{s_5}\Big).
+    \label{eq:ik6}
+\end{align}
+When $s_5=0$, $\theta_6$ is undetermined and the current value is kept. Joints 2--4 form a planar 
+3R arm. With $(x_{14},y_{14})$ the in-plane position of ${}^{1}T_4=({}^{0}T_1)^{-1}\,{}^{0}T_6\,({}^{4}T_6)^{-1}$,
+\begin{align}
+    \theta_3 &= \pm\cos^{-1}\!\frac{x_{14}^2+y_{14}^2-a_2^2-a_3^2}
+        {2a_2a_3},\\
+    \theta_2 &= \operatorname{atan2}(y_{14},x_{14})
+        -\operatorname{atan2}(a_3s_3,\;a_2+a_3c_3),\\
+    \theta_4 &= \operatorname{atan2}\!\big({}^{1}R_{4,21},
+        {}^{1}R_{4,11}\big)-\theta_2-\theta_3 .
+\end{align}
+The three $\pm$ choices give up to eight solutions (\texttt{solve\_ik()}). \texttt{solve\_ik\_closest()} 
+returns the one nearest the current joint state, which keeps the arm in the same configuration branch 
+between waypoints.
+
+\subsubsection{Manipulability}
+Because the UR5 Jacobian is square, Yoshikawa's measure reduces to $\lvert\det J\rvert$, which factors 
+in closed form (\texttt{manipulability.py}):
+\begin{equation}
+    w(\mathbf q)=\bigl|\,a_2a_3\,s_3\,s_5\,
+       (a_2c_2+a_3c_{23}+d_5s_{234})\bigr|\ \ [\text{m}^3].
+    \label{eq:manip}
+\end{equation}
+The three factors vanish at the elbow ($s_3=0$, arm fully extended or folded), wrist ($s_5=0$, axes 
+4 and 6 parallel), and shoulder (wrist center on the plane of axes 1 and 2) singularities, and
+\texttt{singularity\_report()} identifies which one is near. The home position has 
+$\theta_3=\theta_5=0$ and is therefore singular ($w=0$), so the arm leaves it with joint-space 
+motion. During the pour, the pitcher tilt must keep $\theta_5$ away from $0$ and $\pi$.
+
+\subsubsection{Implementation and Verification}
+\texttt{ur5\_kinematics\_node.py} publishes $w(\mathbf q)$ from \texttt{/joint\_states}, warns when 
+$w<10^{-3}$\,m$^3$, and returns the closest IK solution for target poses in \texttt{base}. The unit 
+tests in \texttt{test\_kinematics.py} confirm, over 300 random configurations, that every IK branch 
+reproduces the target pose to within $10^{-8}$ and that Eq.~\eqref{eq:manip} matches 
+$\sqrt{\det(JJ^T)}$ to within $10^{-10}$.
 
 \subsection{Dynamic Model with Time-Varying Payload}
 
