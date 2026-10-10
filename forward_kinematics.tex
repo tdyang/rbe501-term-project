@@ -1,0 +1,105 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,listings,xcolor}
+
+\title{UR5: Forward Kinematics}
+\author{RBE 501}
+\date{}
+
+\lstset{
+    language=Matlab,
+    backgroundcolor=\color{black!5},
+    basicstyle=\footnotesize\ttfamily,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{purple},
+    breaklines=true,
+    showstringspaces=false
+}
+
+\begin{document}
+\maketitle
+
+%=====================================================================
+\section{Product of Exponentials (POE) Forward Kinematics}
+
+In the space-frame Product of Exponentials (POE) approach, the continuous configuration state of the end-effector relative to the base frame is described by:
+\begin{equation}
+  T(\mathbf{\theta}) = e^{[\mathcal{S}_1]\theta_1} e^{[\mathcal{S}_2]\theta_2} e^{[\mathcal{S}_3]\theta_3} e^{[\mathcal{S}_4]\theta_4} e^{[\mathcal{S}_5]\theta_5} e^{[\mathcal{S}_6]\theta_6} M
+\end{equation}
+
+\paragraph{Home Position Matrix ($M$).}
+When all joint angles are zero ($\mathbf{\theta}=\mathbf{0}$), the manipulator is in a fully extended vertical position. The initial end-effector pose matrix $M \in SE(3)$ is given by:
+\begin{equation}
+  \boxed{\;
+  M = \begin{bmatrix} 1 & 0 & 0 & 0 \\ 0 & 1 & 0 & d_4+d_6 \\ 0 & 0 & 1 & d_1+a_2+a_3 \\ 0 & 0 & 0 & 1 \end{bmatrix}
+  \;}
+\end{equation}
+
+\paragraph{Joint 1.}
+The rotation axis points along the positive $Z$-axis, passing through the origin.
+\begin{equation}
+  \mathbf{\omega}_1 = \begin{bmatrix} 0 \\ 0 \\ 1 \end{bmatrix}, \quad \mathbf{q}_1 = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} \quad \Rightarrow \quad \boxed{\;\mathcal{S}_1 = \begin{bmatrix} 0 & 0 & 1 & 0 & 0 & 0 \end{bmatrix}^T\;}
+\end{equation}
+
+\paragraph{Joint 2.}
+The axis is parallel to the $Y$-axis, offset by $d_4$ laterally and $d_1$ vertically.
+\begin{equation}
+  \mathbf{\omega}_2 = \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}, \quad \mathbf{q}_2 = \begin{bmatrix} 0 \\ d_4 \\ d_1 \end{bmatrix} \quad \Rightarrow \quad \boxed{\;\mathcal{S}_2 = \begin{bmatrix} 0 & 1 & 0 & d_1 & 0 & 0 \end{bmatrix}^T\;}
+\end{equation}
+
+\paragraph{Joint 3.}
+The axis is parallel to the $Y$-axis, located at the upper arm height.
+\begin{equation}
+  \mathbf{\omega}_3 = \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}, \quad \mathbf{q}_3 = \begin{bmatrix} 0 \\ d_4 \\ d_1+a_2 \end{bmatrix} \quad \Rightarrow \quad \boxed{\;\mathcal{S}_3 = \begin{bmatrix} 0 & 1 & 0 & d_1+a_2 & 0 & 0 \end{bmatrix}^T\;}
+\end{equation}
+
+\paragraph{Joint 4.}
+The axis is parallel to the $Y$-axis, located at the forearm length height.
+\begin{equation}
+  \mathbf{\omega}_4 = \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}, \quad \mathbf{q}_4 = \begin{bmatrix} 0 \\ 0 \\ d_1+a_2+a_3 \end{bmatrix} \quad \Rightarrow \quad \boxed{\;\mathcal{S}_4 = \begin{bmatrix} 0 & 1 & 0 & d_1+a_2+a_3 & 0 & 0 \end{bmatrix}^T\;}
+\end{equation}
+
+\paragraph{Joint 5.}
+The axis is parallel to the $Z$-axis at home position, sharing the same vertical height as Joint 4.
+\begin{equation}
+  \mathbf{\omega}_5 = \begin{bmatrix} 0 \\ 0 \\ 1 \end{bmatrix}, \quad \mathbf{q}_5 = \begin{bmatrix} 0 \\ d_4 \\ d_1+a_2+a_3 \end{bmatrix} \quad \Rightarrow \quad \boxed{\;\mathcal{S}_5 = \begin{bmatrix} 0 & 0 & 1 & d_4 & 0 & 0 \end{bmatrix}^T\;}
+\end{equation}
+
+\paragraph{Joint 6.}
+The terminal rotation axis is parallel to the $Y$-axis.
+\begin{equation}
+  \mathbf{\omega}_6 = \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}, \quad \mathbf{q}_6 = \begin{bmatrix} 0 \\ d_4 \\ d_1+a_2+a_3+d_5 \end{bmatrix} \quad \Rightarrow \quad \boxed{\;\mathcal{S}_6 = \begin{bmatrix} 0 & 1 & 0 & d_1+a_2+a_3+d_5 & 0 & 0 \end{bmatrix}^T\;}
+\end{equation}
+
+%=====================================================================
+\section{Geometric Jacobian Formulation}
+
+The $6 \times 6$ Geometric Jacobian matrix $J(\mathbf{q})$ maps the joint velocities directly to the end-effector spatial velocities. It is constructed column by column based on the current axis orientation vectors $\mathbf{z}_{i-1}$ and link frame origins $\mathbf{o}_{i-1}$ extracted from the forward kinematics steps:
+\begin{align}
+  T_{01} &= e^{[\mathcal{S}_1]\theta_1} M, \quad T_{02} = T_{01}e^{[\mathcal{S}_2]\theta_2}, \quad \dots, \quad T_{06} = T(\mathbf{\theta})
+\end{align}
+Let $\mathbf{o}_{end} = T_{06}(1:3, 4)$ represent the instantaneous position of the end-effector tip.
+
+\paragraph{Jacobian Columns Mapping.}
+\begin{align}
+  \text{Column 1 (Joint 1):} \quad & J_1 = \begin{bmatrix} \mathbf{z}_0 \times (\mathbf{o}_{end} - \mathbf{o}_0) \\ \mathbf{z}_0 \end{bmatrix}, \quad \text{where } \mathbf{z}_0 = \begin{bmatrix}0\\0\\1\end{bmatrix}, \, \mathbf{o}_0 = \begin{bmatrix}0\\0\\0\end{bmatrix} \\
+  \text{Column 2 (Joint 2):} \quad & J_2 = \begin{bmatrix} \mathbf{z}_1 \times (\mathbf{o}_{end} - \mathbf{o}_1) \\ \mathbf{z}_1 \end{bmatrix}, \quad \text{where } \mathbf{z}_1 = T_{01}(1:3,3), \, \mathbf{o}_1 = T_{01}(1:3,4) \\
+  \text{Column 3 (Joint 3):} \quad & J_3 = \begin{bmatrix} \mathbf{z}_2 \times (\mathbf{o}_{end} - \mathbf{o}_2) \\ \mathbf{z}_2 \end{bmatrix}, \quad \text{where } \mathbf{z}_2 = T_{02}(1:3,3), \, \mathbf{o}_2 = T_{02}(1:3,4) \\
+  \text{Column 4 (Joint 4):} \quad & J_4 = \begin{bmatrix} \mathbf{z}_3 \times (\mathbf{o}_{end} - \mathbf{o}_3) \\ \mathbf{z}_3 \end{bmatrix}, \quad \text{where } \mathbf{z}_3 = T_{03}(1:3,3), \, \mathbf{o}_3 = T_{03}(1:3,4) \\
+  \text{Column 5 (Joint 5):} \quad & J_5 = \begin{bmatrix} \mathbf{z}_4 \times (\mathbf{o}_{end} - \mathbf{o}_4) \\ \mathbf{z}_4 \end{bmatrix}, \quad \text{where } \mathbf{z}_4 = T_{04}(1:3,3), \, \mathbf{o}_4 = T_{04}(1:3,4) \\
+  \text{Column 6 (Joint 6):} \quad & J_6 = \begin{bmatrix} \mathbf{z}_5 \times (\mathbf{o}_{end} - \mathbf{o}_5) \\ \mathbf{z}_5 \end{bmatrix}, \quad \text{where } \mathbf{z}_5 = T_{05}(1:3,3), \, \mathbf{o}_5 = T_{05}(1:3,4)
+\end{align}
+
+The combined configuration formula for the matrix is expressed as:
+\begin{equation}
+  \boxed{\;
+  J(\mathbf{q}) = \begin{bmatrix} 
+    \mathbf{z}_0 \times (\mathbf{o}_{end} - \mathbf{o}_0) & \dots & \mathbf{z}_5 \times (\mathbf{o}_{end} - \mathbf{o}_5) \\
+    \mathbf{z}_0 & \dots & \mathbf{z}_5
+  \end{bmatrix}
+  \;}
+\end{equation}
+
+\end{document}
+
