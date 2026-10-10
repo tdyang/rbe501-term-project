@@ -5,7 +5,9 @@ Subscribes
     ~/target_pose              geometry_msgs/PoseStamped  desired tool0 pose in `base`
 
 Publishes
-    ~/manipulability           std_msgs/Float64           w(q) at the current state
+    ~/tool_pose                geometry_msgs/PoseStamped  FK: tool0 pose in `base`
+    ~/manipulability           std_msgs/Float64           w(q) = |det J(q)|
+    ~/inverse_condition        std_msgs/Float64           sigma_min/sigma_max of J (0 = singular)
     ~/ik_solution              sensor_msgs/JointState     IK solution closest to current q
 
 Parameters
@@ -26,8 +28,11 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
 
 from barista_control import ur5_params as P
+from barista_control.forward_kinematics import forward_kinematics
+from barista_control.jacobian import jacobian
 from barista_control.inverse_kinematics import solve_ik_closest
-from barista_control.manipulability import manipulability, singularity_report
+from barista_control.manipulability import (
+    manipulability, yoshikawa, inverse_condition, singularity_report)
 
 
 def quat_to_rot(x, y, z, w):
@@ -39,6 +44,32 @@ def quat_to_rot(x, y, z, w):
         [2 * (x * y + z * w),     1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
         [2 * (x * z - y * w),     2 * (y * z + x * w),     1 - 2 * (x * x + y * y)],
     ])
+    
+    
+def rot_to_quat(R):
+    """3x3 rotation matrix -> unit quaternion (x, y, z, w)."""
+    tr = np.trace(R)
+    if tr > 0:
+        s = 2.0 * np.sqrt(tr + 1.0)
+        return ((R[2, 1] - R[1, 2]) / s, (R[0, 2] - R[2, 0]) / s,
+                (R[1, 0] - R[0, 1]) / s, 0.25 * s)
+    i = int(np.argmax(np.diag(R)))
+    j, k = (i + 1) % 3, (i + 2) % 3
+    s = 2.0 * np.sqrt(1.0 + R[i, i] - R[j, j] - R[k, k])
+    q = np.zeros(4)
+    q[i] = 0.25 * s
+    q[j] = (R[j, i] + R[i, j]) / s
+    q[k] = (R[k, i] + R[i, k]) / s
+    q[3] = (R[k, j] - R[j, k]) / s
+    return tuple(q)
+
+
+def matrix_to_pose(T):
+    pose = PoseStamped().pose
+    pose.position.x, pose.position.y, pose.position.z = (float(v) for v in T[:3, 3])
+    (pose.orientation.x, pose.orientation.y,
+     pose.orientation.z, pose.orientation.w) = (float(v) for v in rot_to_quat(T[:3, :3]))
+    return pose
 
 
 def pose_to_matrix(pose):
@@ -58,7 +89,9 @@ class UR5KinematicsNode(Node):
 
         self.create_subscription(JointState, "/joint_states", self.on_joint_state, 10)
         self.create_subscription(PoseStamped, "~/target_pose", self.on_target_pose, 10)
+        self.pub_pose = self.create_publisher(PoseStamped, "~/tool_pose", 10)
         self.pub_w = self.create_publisher(Float64, "~/manipulability", 10)
+        self.pub_cond = self.create_publisher(Float64, "~/inverse_condition", 10)
         self.pub_ik = self.create_publisher(JointState, "~/ik_solution", 10)
 
         self.get_logger().info("UR5 kinematics node ready.")
@@ -69,8 +102,18 @@ class UR5KinematicsNode(Node):
             return
         self.q = np.array([msg.position[idx[n]] for n in P.JOINT_NAMES])
 
-        w = manipulability(self.q)
-        self.pub_w.publish(Float64(data=float(w)))
+        # forward kinematics: current tool0 pose
+        out = PoseStamped()
+        out.header.stamp = msg.header.stamp
+        out.header.frame_id = "base"
+        out.pose = matrix_to_pose(forward_kinematics(self.q))
+        self.pub_pose.publish(out)
+
+        # manipulability from the Jacobian
+        J = jacobian(self.q)
+        w = yoshikawa(J)
+        self.pub_w.publish(Float64(data=w))
+        self.pub_cond.publish(Float64(data=inverse_condition(J)))
 
         thresh = self.get_parameter("singularity_threshold").value
         if w < thresh:
@@ -92,6 +135,14 @@ class UR5KinematicsNode(Node):
             self.get_logger().error("No IK solution: target pose unreachable.")
             return
 
+
+        # check: the solution must reproduce the target through FK
+        T_target = pose_to_matrix(msg.pose)
+        err = np.linalg.norm(forward_kinematics(q_sol)[:3, 3] - T_target[:3, 3])
+        if err > 1e-4:
+            self.get_logger().error(f"IK/FK mismatch of {err * 1000:.2f} mm, not publishing.")
+            return
+        
         out = JointState()
         out.header.stamp = self.get_clock().now().to_msg()
         out.name = list(P.JOINT_NAMES)

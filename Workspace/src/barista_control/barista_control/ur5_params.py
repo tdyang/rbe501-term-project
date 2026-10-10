@@ -13,49 +13,31 @@ D4 = 0.10915
 D5 = 0.09465
 D6 = 0.0823
 
-# Home Configuration
-M1 = np.array([
-    [1,  0,  0,  0],
-    [0,  0,  1,  D4],
-    [0, -1,  0,  D1],
-    [0,  0,  0,  1],
-], dtype=float)
-
-M2 = np.array([
-    [1,  0,  0,  0],
-    [0,  0,  1,  D4],
-    [0, -1,  0,  D1 + A2],
-    [0,  0,  0,  1],
-], dtype=float)
-
-M3 = np.array([
-    [1,  0,  0,  0],
-    [0,  0,  1,  0],
-    [0, -1,  0,  D1 + A2 + A3],
-    [0,  0,  0,  1],
-], dtype=float)
-
-M4 = np.array([
-    [1,  0,  0,  0],
-    [0,  1,  0,  D4],
-    [0,  0,  1,  D1 + A2 + A3],
-    [0,  0,  0,  1],
-], dtype=float)
-
-M5 = np.array([
-    [1,  0,  0,  0],
-    [0,  0,  1,  D4],
-    [0, -1,  0,  D1 + A2 + A3 + D5],
-    [0,  0,  0,  1],
-], dtype=float)
-
+# PoE model at the zero configuration (arm horizontal along -x), base -> tool0
+# Joint axes w_i and a point q_i on each axis, in the `base` frame
+SCREW_W = np.array([
+    [0.0,  0.0,  1.0],
+    [0.0, -1.0,  0.0],
+    [0.0, -1.0,  0.0],
+    [0.0, -1.0,  0.0],
+    [0.0,  0.0, -1.0],
+    [0.0, -1.0,  0.0],
+])
+SCREW_Q = np.array([
+    [0.0,      0.0, 0.0],
+    [0.0,      0.0, D1],
+    [A2,       0.0, D1],
+    [A2 + A3,  0.0, D1],
+    [A2 + A3, -D4,  D1],
+    [A2 + A3, -D4,  D1 - D5],
+])
+# tool0 pose at q = 0
 M = np.array([
-    [1,  0,  0,  0],
-    [0,  1,  0,  D4 + D6],
-    [0,  0,  1,  D1 + A2 + A3 + D5],
-    [0,  0,  0,  1],
-], dtype=float)
-
+    [1.0, 0.0,  0.0, A2 + A3],
+    [0.0, 0.0, -1.0, -(D4 + D6)],
+    [0.0, 1.0,  0.0, D1 - D5],
+    [0.0, 0.0,  0.0, 1.0],
+])
 
 DH_A = np.array([0.0, A2, A3, 0.0, 0.0, 0.0])
 DH_ALPHA = np.array([np.pi / 2, 0.0, 0.0, np.pi / 2, -np.pi / 2, 0.0])

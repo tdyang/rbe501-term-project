@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 
 from barista_control import ur5_params as P
+from barista_control.forward_kinematics import forward_kinematics
+from barista_control.jacobian import jacobian
 from barista_control.inverse_kinematics import solve_ik, solve_ik_closest, wrap_to_pi
 from barista_control.manipulability import manipulability, yoshikawa, singularity_report
 
@@ -53,6 +55,56 @@ def test_zero_is_horizontal():
     T = ref_fk(np.zeros(6))
     assert T[0, 3] == pytest.approx(P.A2 + P.A3, abs=1e-9)   # reaches out along -x
 
+
+
+
+# ---- forward kinematics / Jacobian (PoE) ------------------------------------
+def test_fk_matches_dh():
+    for _ in range(N):
+        q = random_q()
+        assert np.allclose(forward_kinematics(q), ref_fk(q), atol=1e-9)
+
+
+def test_fk_home_is_vertical():
+    p = forward_kinematics(P.Q_HOME)[:3, 3]
+    assert np.allclose(p, [0.0, -(P.D4 + P.D6), P.D1 - P.A2 - P.A3 + P.D5], atol=1e-9)
+
+
+def test_fk_zero_is_horizontal():
+    assert np.allclose(forward_kinematics(np.zeros(6)), P.M, atol=1e-12)
+
+
+def test_jacobian_matches_reference():
+    for _ in range(N):
+        q = random_q()
+        assert np.allclose(jacobian(q), ref_jacobian(q), atol=1e-9)
+
+
+def test_jacobian_matches_fk_finite_difference():
+    """Linear rows = d(tool position)/dq, angular rows from dR R^T."""
+    h = 1e-6
+    for _ in range(50):
+        q = random_q()
+        J = jacobian(q)
+        R = forward_kinematics(q)[:3, :3]
+        for i, e in enumerate(np.eye(6)):
+            Tp, Tm = forward_kinematics(q + h * e), forward_kinematics(q - h * e)
+            assert np.allclose(J[:3, i], (Tp[:3, 3] - Tm[:3, 3]) / (2 * h), atol=1e-6)
+            W = (Tp[:3, :3] - Tm[:3, :3]) / (2 * h) @ R.T          # skew(omega_i)
+            assert np.allclose(J[3:, i], [W[2, 1], W[0, 2], W[1, 0]], atol=1e-6)
+
+
+def test_jacobian_det_matches_manipulability():
+    for _ in range(N):
+        q = random_q()
+        assert yoshikawa(jacobian(q)) == pytest.approx(manipulability(q), abs=1e-10)
+
+
+def test_ik_roundtrip_through_fk():
+    for _ in range(N):
+        T = forward_kinematics(random_q())
+        for q in solve_ik(T):
+            assert np.allclose(forward_kinematics(q), T, atol=1e-8)
 
 # ---- inverse kinematics -------------------------------------------------
 def test_ik_all_solutions_reproduce_pose():

@@ -174,8 +174,6 @@ stages:
             and the scale measures the mass poured into the mug. The joint
             encoders report the arm's joint positions and velocities.
 \end{enumerate}
-Joint states from the measurements
-are fed back to the controller and the state machine at each control step as seen in Figure~\ref{fig:pipeline}.
 
 \begin{figure}[t]
 \centering
@@ -210,6 +208,9 @@ are fed back to the controller and the state machine at each control step as see
 \label{fig:pipeline}
 \end{figure}
 
+Joint states from the measurements are fed back to the controller and the state machine 
+at each control step as seen in Figure~\ref{fig:pipeline}.
+
 \subsection{Kinematic Model}
 % TODO: equations (submit your model equations with all variables and parameters clearly defined) (tracy and jingxuan)
 \subsubsection{Parameters and Conventions}
@@ -237,6 +238,10 @@ with the arm pointing straight up, is $\mathbf q_{\text{home}}=[0,-\tfrac{\pi}{2
         \bottomrule
     \end{tabular}
 \end{table}
+
+\subsubsection{Jacobian}
+
+\subsubsection{Forward Kinematics}
 
 \subsubsection{Inverse Kinematics}
 \texttt{inverse\_kinematics.py} implements the closed-form solution of~\cite{kebria2016}. For a 
