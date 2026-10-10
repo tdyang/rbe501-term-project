@@ -18,6 +18,7 @@ setup(
     license='TODO',
     entry_points={
         'console_scripts': [
+            'ur5_kinematics_node = barista_control.ur5_kinematics_node:main',
         ],
     },
 )

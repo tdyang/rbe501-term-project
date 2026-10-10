@@ -7,10 +7,9 @@ import numpy as np
 import pytest
 
 from barista_control import ur5_params as P
-from barista_control.forward_kinematics import forward_kinematics
-from barista_control.jacobian import jacobian
-from barista_control.inverse_kinematics import solve_ik, solve_ik_closest, wrap_to_pi
-from barista_control.manipulability import manipulability, yoshikawa, singularity_report
+from barista_control.kinematics import (
+    forward_kinematics, jacobian, solve_ik, solve_ik_closest, wrap_to_pi,
+    manipulability, yoshikawa, singularities)
 
 RNG = np.random.default_rng(0)
 N = 300
@@ -54,8 +53,6 @@ def test_home_is_vertical():
 def test_zero_is_horizontal():
     T = ref_fk(np.zeros(6))
     assert T[0, 3] == pytest.approx(P.A2 + P.A3, abs=1e-9)   # reaches out along -x
-
-
 
 
 # ---- forward kinematics / Jacobian (PoE) ------------------------------------
@@ -162,4 +159,4 @@ def test_singularities(joint, value, name):
     q = random_q()
     q[joint] = value
     assert manipulability(q) < 1e-12
-    assert singularity_report(q)[name][1]
+    assert name in singularities(q)

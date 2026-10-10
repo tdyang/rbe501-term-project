@@ -28,11 +28,9 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
 
 from barista_control import ur5_params as P
-from barista_control.forward_kinematics import forward_kinematics
-from barista_control.jacobian import jacobian
-from barista_control.inverse_kinematics import solve_ik_closest
-from barista_control.manipulability import (
-    manipulability, yoshikawa, inverse_condition, singularity_report)
+from barista_control.kinematics import (
+    forward_kinematics, jacobian, solve_ik_closest,
+    manipulability, yoshikawa, inverse_condition, singularities)
 
 
 def quat_to_rot(x, y, z, w):
@@ -44,8 +42,8 @@ def quat_to_rot(x, y, z, w):
         [2 * (x * y + z * w),     1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
         [2 * (x * z - y * w),     2 * (y * z + x * w),     1 - 2 * (x * x + y * y)],
     ])
-    
-    
+
+
 def rot_to_quat(R):
     """3x3 rotation matrix -> unit quaternion (x, y, z, w)."""
     tr = np.trace(R)
@@ -117,10 +115,8 @@ class UR5KinematicsNode(Node):
 
         thresh = self.get_parameter("singularity_threshold").value
         if w < thresh:
-            rep = singularity_report(self.q)
-            near = [k for k in ("elbow", "wrist", "shoulder") if rep[k][1]]
             self.get_logger().warn(
-                f"Near singularity: w={w:.2e} ({', '.join(near) or 'combined'})",
+                f"Near singularity: w={w:.2e} ({', '.join(singularities(self.q)) or 'combined'})",
                 throttle_duration_sec=1.0)
 
     def on_target_pose(self, msg):
@@ -128,21 +124,18 @@ class UR5KinematicsNode(Node):
             self.get_logger().warn(
                 f"target_pose frame is '{msg.header.frame_id}', expected 'base'. "
                 "Transform it first (base_link is rotated 180 deg about z).")
-        q_ref = self.q if self.q is not None else P.Q_HOME
-        q_sol = solve_ik_closest(pose_to_matrix(msg.pose), q_ref)
-
+        T_target = pose_to_matrix(msg.pose)
+        q_sol = solve_ik_closest(T_target, self.q if self.q is not None else P.Q_HOME)
         if q_sol is None:
             self.get_logger().error("No IK solution: target pose unreachable.")
             return
 
-
         # check: the solution must reproduce the target through FK
-        T_target = pose_to_matrix(msg.pose)
         err = np.linalg.norm(forward_kinematics(q_sol)[:3, 3] - T_target[:3, 3])
         if err > 1e-4:
             self.get_logger().error(f"IK/FK mismatch of {err * 1000:.2f} mm, not publishing.")
             return
-        
+
         out = JointState()
         out.header.stamp = self.get_clock().now().to_msg()
         out.name = list(P.JOINT_NAMES)

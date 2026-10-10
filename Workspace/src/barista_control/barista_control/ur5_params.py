@@ -58,14 +58,9 @@ JOINT_NAMES = [
 Q_MIN = np.full(N_JOINTS, -2 * np.pi)
 Q_MAX = np.full(N_JOINTS, 2 * np.pi)
 
-# ---------------------------------------------------------------------------
-# Named joint configurations [rad]
-# ---------------------------------------------------------------------------
-Q_HOME = np.array([0.0, -np.pi / 2, 0.0, -np.pi / 2, 0.0, 0.0])     # arm vertical
+# Home configuration [rad], arm vertical
+Q_HOME = np.array([0.0, -np.pi / 2, 0.0, -np.pi / 2, 0.0, 0.0])
 
-NAMED_CONFIGS = {
-    "home": Q_HOME,
-}
 
 def dh_transform(theta, d, a, alpha):
     """Standard DH homogeneous transform  ^{i-1}T_i  (4x4)."""

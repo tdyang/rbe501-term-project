@@ -214,7 +214,7 @@ at each control step as seen in Figure~\ref{fig:pipeline}.
 \subsection{Kinematic Model}
 % TODO: equations (submit your model equations with all variables and parameters clearly defined) (tracy and jingxuan)
 \subsubsection{Parameters and Conventions}
-All kinematics modules share one parameter file, \texttt{ur5\_params.py}. We use the manufacturer's 
+Forward kinematics, the Jacobian, inverse kinematics, and manipulability are all implemented in \texttt{kinematics.py}, which reads its parameters from \texttt{ur5\_params.py}. We use the manufacturer's 
 DH table (Table~\ref{tab:dh}), whose negative $a_2$ and $a_3$ match the joint angles reported by 
 the UR controller; Kebria et al.~\cite{kebria2016} list them as positive, which describes a mirrored 
 arm. Frames $\{0\}$ and $\{6\}$ are the ROS \texttt{base} and \texttt{tool0} frames. The home position, 
@@ -244,7 +244,7 @@ with the arm pointing straight up, is $\mathbf q_{\text{home}}=[0,-\tfrac{\pi}{2
 \subsubsection{Forward Kinematics}
 
 \subsubsection{Inverse Kinematics}
-\texttt{inverse\_kinematics.py} implements the closed-form solution of~\cite{kebria2016}. For a 
+\texttt{solve\_ik()} implements the closed-form solution of~\cite{kebria2016}. For a 
 desired pose ${}^{0}T_6$ with tool axes $\hat{\mathbf x},\hat{\mathbf y},\hat{\mathbf z}$ and 
 position $\mathbf p$, the wrist center $\mathbf p_5=\mathbf p-d_6\hat{\mathbf z}$ gives
 \begin{align}
@@ -266,13 +266,13 @@ When $s_5=0$, $\theta_6$ is undetermined and the current value is kept. Joints 2
     \theta_4 &= \operatorname{atan2}\!\big({}^{1}R_{4,21},
         {}^{1}R_{4,11}\big)-\theta_2-\theta_3 .
 \end{align}
-The three $\pm$ choices give up to eight solutions (\texttt{solve\_ik()}). \texttt{solve\_ik\_closest()} 
+The three $\pm$ choices give up to eight solutions. \texttt{solve\_ik\_closest()} 
 returns the one nearest the current joint state, which keeps the arm in the same configuration branch 
 between waypoints.
 
 \subsubsection{Manipulability}
 Because the UR5 Jacobian is square, Yoshikawa's measure reduces to $\lvert\det J\rvert$, which factors 
-in closed form (\texttt{manipulability.py}):
+in closed form (\texttt{manipulability()}):
 \begin{equation}
     w(\mathbf q)=\bigl|\,a_2a_3\,s_3\,s_5\,
        (a_2c_2+a_3c_{23}+d_5s_{234})\bigr|\ \ [\text{m}^3].
@@ -280,7 +280,7 @@ in closed form (\texttt{manipulability.py}):
 \end{equation}
 The three factors vanish at the elbow ($s_3=0$, arm fully extended or folded), wrist ($s_5=0$, axes 
 4 and 6 parallel), and shoulder (wrist center on the plane of axes 1 and 2) singularities, and
-\texttt{singularity\_report()} identifies which one is near. The home position has 
+\texttt{singularities()} reports which ones are near. The home position has 
 $\theta_3=\theta_5=0$ and is therefore singular ($w=0$), so the arm leaves it with joint-space 
 motion. During the pour, the pitcher tilt must keep $\theta_5$ away from $0$ and $\pi$.
 
