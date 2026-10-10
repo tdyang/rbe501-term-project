@@ -1,6 +1,6 @@
 import numpy as np
 
-from ur5_params import d1, a2, a3, d4, d5, d6, M1, M2, M3, M4, M5, M
+from ur5_params import D1, A2, A3, D4, D5, D6, M1, M2, M3, M4, M5, M
 from common_function import screw_exp
 
 
@@ -21,11 +21,11 @@ def jacobian(theta1, theta2, theta3, theta4, theta5, theta6):
 
     q = [
         np.array([0.0, 0.0, 0.0]),
-        np.array([0.0, d4, d1]),
-        np.array([0.0, d4, d1 + a2]),
-        np.array([0.0, 0.0, d1 + a2 + a3]),
-        np.array([0.0, d4, d1 + a2 + a3]),
-        np.array([0.0, d4, d1 + a2 + a3 + d5]),
+        np.array([0.0, D4, D1]),
+        np.array([0.0, D4, D1 + A2]),
+        np.array([0.0, 0.0, D1 + A2 + A3]),
+        np.array([0.0, D4, D1 + A2 + A3]),
+        np.array([0.0, D4, D1 + A2 + A3 + D5]),
     ]
 
     E = [screw_exp(w[i], q[i], theta[i]) for i in range(6)]
