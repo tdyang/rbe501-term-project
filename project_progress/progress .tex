@@ -1,0 +1,372 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+\begin{document}
+
+\title{Dynamic-Payload Pick-and-Pour Control for a UR5 Barista Robot:\\
+    Progress Report}
+
+\author{\IEEEauthorblockN{Soumaya El Mansouri, Jingxuan Yang, Tracy Yang}
+    \IEEEauthorblockA{RBE 501, Worcester Polytechnic Institute\\
+        Worcester, MA, USA}}
+
+\maketitle
+
+%==========================================================
+\section{Introduction}
+%==========================================================
+
+\subsection{Problem Description}
+Pouring is a common manipulation task in food service, laboratory work, and households. Despite this, 
+pouring and handling liquid remains difficult for robotic arms. As liquid leaves the container, the payload 
+held by the arm both loses mass and shifts as the liquid moves. This requires the controller for this task to 
+take into account fluid movement, and dynamic payload, which drastically increases the complexity of a pick and place task. 
+In addition, a poor grasp or inadequate sensing of the poured amount can lead to spills or an overfilled cup.
+
+This project addresses changing payload and the sensing problem for a UR5 manipulator simulated in ROS2 and Gazebo Harmonic.
+
+\subsection{Related Work}
+
+Our task combines three problems that the literature has mostly treated
+separately: modelling the arm itself, perceiving how much liquid has been
+poured, and deciding how to pour. We organize prior work around these problems
+and, for each paper, state what we take from it and what we change.
+
+\textbf{UR5 modelling.}
+Kebria et al.\ \cite{kebria2016} derive the DH parameters, closed-form forward and inverse kinematics, 
+and the Lagrangian dynamics (inertia, Coriolis, and gravity terms) of the UR5, and they verify the 
+model in SimMechanics with a PD controller using feedback linearization. This is the most direct 
+foundation for our project. Using these equations, we compute the Jacobian, manipulability, and joint 
+torques along the pick-and-pour trajectory, and we use their DH table and inverse-kinematics as our 
+starting point. The limitation is that their dynamics assume constant link and payload parameters. 
+In our task, the arm holds a container that loses mass throughout the pour, so a controller built on 
+their model with a fixed payload would see a changing gravity and inertia load as an unmodelled 
+disturbance.
+
+\textbf{Vision-based liquid volume estimation.}
+Schober et al.\ \cite{schober2024} estimate the liquid volume in transparent containers from a single 
+RGB image and then execute a pouring motion selected from a simulation on a UR5e. Their pouring strategy 
+of rotating the container about a fixed liquid exit point is useful for the small opening of a coffee 
+container. Their results, however, show why vision alone is not enough for our task: the complete pipeline 
+had RMSE of 21--26\,mL for 30--50\,mL targets, and the authors note that volume-estimation and simulation 
+errors add up so the setup is not precise enough for laboratory use. Because a pour is selected before it 
+starts and then executed without feedback, an error in the volume estimate cannot be corrected during the pour. 
+We therefore use the camera only to localize the mug and container for grasping and placing, and we take the 
+poured amount from a scale, which gives a direct measurement that can be used to stop the pour.
+
+\textbf{Force/torque perception of liquids.}
+Luo et al.\ \cite{luo2024} use a wrist-mounted force/torque sensor on a UR5e to push a whisk through pancake 
+batter and infer its uniformity, liquid level, and water-flour ratio from the resistance torque. They then 
+pour by rotating the wrist at a constant angular speed and use a learned model to set the arm speed from the 
+batter properties. This matters for us for two reasons. First, it shows that a wrist force/torque sensor on 
+this class of arm gives measurements precise enough to be useful (liquid level within about 3--4\% error). 
+Second, it uses the sensor at the same location we plan to, which supports using it to track the weight of the 
+container in the gripper as it empties. Their pour, however, is open loop with respect to the amount poured: 
+the properties are measured before pouring, and nothing is measured during the pour to decide when to stop. 
+We close this loop by feeding the sensor and scale measurements back into both the stopping decision and the 
+controller.
+
+\textbf{Learned pouring policies.}
+Babaians et al.\ \cite{babaians2022} train PourNet, a reinforcement-learning policy with curiosity-based 
+exploration and curriculum learning in simulation, and execute its motion on a Kinova Movo with a nonlinear 
+model predictive controller. It is the work closest to ours in goal. Its second arm holds the target container 
+and measures its weight with a force/torque sensor, and the pour is based on this feedback, with deviations of 
+a few grams across liquids. It also gives a practical recipe for the measurement itself using an IMU for 
+gravity compensation and a low-pass filter on the force/torque signal (1\,Hz cut-off), which we can adapt for 
+our scale and wrist sensor. The cost is that the policy needs millions of simulated training steps and treats 
+the pour as end-effector planning, so it does not model how the arm's own dynamics change as the held container 
+loses mass. For a course project with limited simulation time, a model-based controller whose structure is 
+known and which can be analyzed with the Jacobian and manipulability tools from class is a better fit than a 
+trained policy.
+
+\textbf{Comparison and our approach.}
+Table~\ref{tab:compare} compares these works with ours. Taken together, the prior work establishes (i) a 
+complete UR5 model \cite{kebria2016}, (ii) that vision alone is too imprecise for the poured amount 
+\cite{schober2024}, (iii) that wrist force/torque sensing carries useful information about the liquid 
+\cite{luo2024}, and (iv) that weight feedback from the target container gives accurate pours 
+\cite{babaians2022}. What none of them does is model the arm carrying a payload whose mass changes during 
+the pour and design the controller around it. Our work fills this gap: we extend the UR5 model of 
+\cite{kebria2016} with a time-varying payload, combine a camera (object localization), a scale (poured 
+mass), and a wrist force/torque sensor (payload mass) for feedback, and use a model-based controller that 
+compensates for the changing load. We evaluate this on the complete pick-up-and-pour sequence in ROS2 and 
+Gazebo and examine manipulability and singularities along the trajectory.
+
+\begin{table}[t]
+    \caption{Comparison of related work and this project}
+    \label{tab:compare}
+    \centering
+    \small
+    \begin{tabular}{@{}p{1.5cm}p{1.9cm}p{1.9cm}p{1.9cm}@{}}
+        \toprule
+        Work                & Sensing                  & Pour control                     & Time-varying load modelled \\
+        \midrule
+        \cite{kebria2016}   & --                       & PD tracking                      & No                         \\
+        \cite{schober2024}  & RGB camera               & Simulation-selected, no feedback & No                         \\
+        \cite{luo2024}      & Wrist F/T                & Open-loop                        & No                         \\
+        \cite{babaians2022} & F/T (weight of target)   & RL + NMPC                        & Learned implicitly         \\
+        \textbf{Ours}       & Camera, scale, wrist F/T & Model-based, dynamic load        & Yes                        \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+%==========================================================
+\section{Methodology}
+\label{sec:method}
+%==========================================================
+\subsection{Robot Sequence}
+The test sequence is a complete beverage-preparation task in which the arm
+carries three different payloads: an empty mug, a pitcher whose mass
+decreases during the pour, and a filled mug. The workspace consists of a
+table holding the mug, the pitcher of coffee, and a scale. Starting from a
+fixed home configuration clear of the table, the arm performs the following
+steps:
+
+[\textbf{INSERT GAZEBO IMAGES}]
+\begin{enumerate}
+    \item \textit{Mug pick-up:} the camera localizes the mug
+          and the arm grasps it.
+    \item \textit{Mug placement:} the arm places the mug on the scale and
+          releases it.
+    \item \textit{Pitcher pick-up:} the camera localizes the pitcher, the arm
+          grasps it, and the wrist force/torque sensor measures its initial
+          mass.
+    \item \textit{Pour:} the arm positions the pitcher above the mug and tilts
+          it. Throughout the pour, the payload mass estimated from the wrist
+          sensor is passed to ends when the
+          scale reports the target mass, at which point the arm returns the
+          pitcher upright.
+    \item \textit{Pitcher return:} the arm sets the empty pitcher down on the
+          table and releases
+    \item \textit{Serving:} the arm grasps the filled mug and places it at a
+          serving location.
+\end{enumerate}
+Each grasp follows the same pre-grasp pose near
+the object, approaches it, grasps it, and lifts it clear of the surface. 
+
+\subsection{Pipeline}
+The system is implemented in ROS~2 Jazzy with Gazebo Harmonic. The
+simulation contains the UR5 arm, the table with the mug, pitcher, and
+scale, a camera, and a wrist force/torque sensor; the arm is driven through
+\texttt{ros2\_control}, and the remaining simulator topics are exchanged
+with ROS~2 through \texttt{ros\_gz\_bridge}. The pipeline consists of four
+stages:
+\begin{enumerate}
+    \item \textit{Task sequencing:} a state machine steps through the
+            sequence above, deciding when to grasp, release, and stop the pour
+            based on the sensing outputs.
+    \item \textit{Motion planning:} for each step, inverse kinematics
+            converts the target end-effector poses into joint configurations,
+            which are interpolated into a joint trajectory.
+    \item \textit{Control:} the controller tracks this trajectory. 
+            The arm's dynamic model is updated with
+            the payload mass from the force/torque sensor, so the
+            controller compensates for the pitcher's weight as it changes
+            during the pour.
+    \item \textit{Sensing:} three sensors observe the task. The camera
+            estimates the poses of the mug and pitcher, the wrist
+            force/torque sensor estimates the mass of the grasped object,
+            and the scale measures the mass poured into the mug. The joint
+            encoders report the arm's joint positions and velocities.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  node distance=5mm,
+  blk/.style={draw, rounded corners=2pt, align=center, minimum height=8mm, text width=2.7cm, fill=blue!6},
+  sim/.style={draw, rounded corners=2pt, align=center, minimum height=8mm, text width=2.7cm, fill=gray!15},
+  arr/.style={-{Latex[length=2mm]}, thick},
+  fb/.style={-{Latex[length=2mm]}, thick, dashed}
+]
+\node[blk] (seq) {\textbf{Task sequencing}\\state machine};
+\node[blk, below=of seq] (plan) {\textbf{Motion planning}\\IK + joint trajectory};
+\node[blk, below=of plan] (ctrl) {\textbf{Control}\\dynamic model with\\payload estimate};
+\node[sim, below=of ctrl] (sim) {\textbf{UR5 in Gazebo}\\\texttt{ros2\_control},\\simulated sensors};
+\node[blk, below=of sim] (perc) {\textbf{Perception}\\camera, wrist F/T,\\scale};
+
+\draw[arr] (seq) -- node[right, xshift=1pt]{target poses} (plan);
+\draw[arr] (plan) -- node[right, xshift=1pt]{$\mathbf{q}_d(t)$} (ctrl);
+\draw[arr] (ctrl) -- node[right, xshift=1pt]{$\boldsymbol{\tau}$} (sim);
+\draw[arr] (sim) -- node[right, xshift=1pt]{sensor data} (perc);
+
+% perception to task sequencing
+\draw[arr] (perc.east) -- ++(0.55,0) |- (seq.east);
+\node[right, align=left] at ([xshift=0.6cm,yshift=-0.6cm]seq.east) {poses,\\masses};
+
+% joint states back to controller and state machine
+\draw[fb] (sim.west) -- ++(-0.55,0) |- node[pos=0.1, left, align=right]{$\mathbf{q},\dot{\mathbf{q}}$} (ctrl.west);
+\draw[fb] (ctrl.west)++(-0.55,0) |- (seq.west);
+\end{tikzpicture}
+\caption{Control pipeline. Solid arrows show the forward flow of commands and data between stages; dashed arrows show joint-state feedback from the robot.}
+\label{fig:pipeline}
+\end{figure}
+
+Joint states from the measurements are fed back to the controller and the state machine 
+at each control step as seen in Figure~\ref{fig:pipeline}.
+
+\subsection{Kinematic Model}
+% TODO: equations (submit your model equations with all variables and parameters clearly defined) (tracy and jingxuan)
+\subsubsection{Parameters and Conventions}
+Forward kinematics, the Jacobian, inverse kinematics, and manipulability are all implemented in \texttt{kinematics.py}, which reads its parameters from \texttt{ur5\_params.py}. We use the manufacturer's 
+DH table (Table~\ref{tab:dh}), whose negative $a_2$ and $a_3$ match the joint angles reported by 
+the UR controller; Kebria et al.~\cite{kebria2016} list them as positive, which describes a mirrored 
+arm. Frames $\{0\}$ and $\{6\}$ are the ROS \texttt{base} and \texttt{tool0} frames. The home position, 
+with the arm pointing straight up, is $\mathbf q_{\text{home}}=[0,-\tfrac{\pi}{2},0,-\tfrac{\pi}{2},0,0]^T$.
+
+\begin{table}[t]
+    \caption{UR5 DH parameters (\texttt{ur5\_params.py})}
+    \label{tab:dh}
+    \centering
+    \small
+    \begin{tabular}{@{}ccccc@{}}
+        \toprule
+        $i$ & $a_i$ [m]  & $\alpha_i$ & $d_i$ [m]  & $\theta_i$ \\
+        \midrule
+        1   & 0          & $\pi/2$    & $0.08916$  & $\theta_1$ \\
+        2   & $-0.425$   & 0          & 0          & $\theta_2$ \\
+        3   & $-0.39225$ & 0          & 0          & $\theta_3$ \\
+        4   & 0          & $\pi/2$    & $0.10915$  & $\theta_4$ \\
+        5   & 0          & $-\pi/2$   & $0.09465$  & $\theta_5$ \\
+        6   & 0          & 0          & $0.0823$   & $\theta_6$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{Jacobian}
+The geometric Jacobian maps joint velocities to
+the end-effector linear and angular velocities:
+\begin{equation}
+    \begin{bmatrix}
+        \mathbf{v}\\
+        \boldsymbol{\omega}
+    \end{bmatrix}
+    = J(\mathbf{q})\dot{\mathbf{q}}.
+\end{equation}
+For each revolute joint, the Jacobian column is
+\begin{equation}
+    J_i =
+    \begin{bmatrix}
+        \mathbf{z}_{i-1}\times
+        (\mathbf{p}_e-\mathbf{p}_{i-1})\\
+        \mathbf{z}_{i-1}
+    \end{bmatrix}.
+\end{equation}
+The Jacobian is implemented in
+\texttt{kinematics.py} and used for
+Cartesian velocity control.
+
+\subsubsection{Forward Kinematics}
+Forward kinematics computes the end-effector
+pose from the joint configuration using the
+product-of-exponentials formulation:
+\begin{equation}
+    T(\mathbf{q}) =
+    e^{[\mathcal{S}_1]\theta_1}
+    \cdots
+    e^{[\mathcal{S}_6]\theta_6}M.
+\end{equation}
+Here, $\mathcal{S}_i$ represents the screw
+axis of joint $i$, and $M$ is the home
+configuration of the end-effector.
+The resulting transformation provides the
+tool position and orientation relative to
+the robot base.
+
+\subsubsection{Inverse Kinematics}
+\texttt{solve\_ik()} implements the closed-form solution of~\cite{kebria2016}. For a 
+desired pose ${}^{0}T_6$ with tool axes $\hat{\mathbf x},\hat{\mathbf y},\hat{\mathbf z}$ and 
+position $\mathbf p$, the wrist center $\mathbf p_5=\mathbf p-d_6\hat{\mathbf z}$ gives
+\begin{align}
+    \theta_1 &= \operatorname{atan2}(p_{5y},p_{5x})
+      \pm\cos^{-1}\!\frac{d_4}{\sqrt{p_{5x}^2+p_{5y}^2}}+\frac{\pi}{2},\\
+    \theta_5 &= \pm\cos^{-1}\!\frac{p_x s_1-p_y c_1-d_4}{d_6},\\
+    \theta_6 &= \operatorname{atan2}\!\Big(
+        \frac{-\hat y_x s_1+\hat y_y c_1}{s_5},\;
+        \frac{\hat x_x s_1-\hat x_y c_1}{s_5}\Big).
+    \label{eq:ik6}
+\end{align}
+When $s_5=0$, $\theta_6$ is undetermined and the current value is kept. Joints 2--4 form a planar 
+3R arm. With $(x_{14},y_{14})$ the in-plane position of ${}^{1}T_4=({}^{0}T_1)^{-1}\,{}^{0}T_6\,({}^{4}T_6)^{-1}$,
+\begin{align}
+    \theta_3 &= \pm\cos^{-1}\!\frac{x_{14}^2+y_{14}^2-a_2^2-a_3^2}
+        {2a_2a_3},\\
+    \theta_2 &= \operatorname{atan2}(y_{14},x_{14})
+        -\operatorname{atan2}(a_3s_3,\;a_2+a_3c_3),\\
+    \theta_4 &= \operatorname{atan2}\!\big({}^{1}R_{4,21},
+        {}^{1}R_{4,11}\big)-\theta_2-\theta_3 .
+\end{align}
+The three $\pm$ choices give up to eight solutions. \texttt{solve\_ik\_closest()} 
+returns the one nearest the current joint state, which keeps the arm in the same configuration branch 
+between waypoints.
+
+\subsubsection{Manipulability}
+Because the UR5 Jacobian is square, Yoshikawa's measure reduces to $\lvert\det J\rvert$, which factors 
+in closed form (\texttt{manipulability()}):
+\begin{equation}
+    w(\mathbf q)=\bigl|\,a_2a_3\,s_3\,s_5\,
+       (a_2c_2+a_3c_{23}+d_5s_{234})\bigr|\ \ [\text{m}^3].
+    \label{eq:manip}
+\end{equation}
+The three factors vanish at the elbow ($s_3=0$, arm fully extended or folded), wrist ($s_5=0$, axes 
+4 and 6 parallel), and shoulder (wrist center on the plane of axes 1 and 2) singularities, and
+\texttt{singularities()} reports which ones are near. The home position has 
+$\theta_3=\theta_5=0$ and is therefore singular ($w=0$), so the arm leaves it with joint-space 
+motion. During the pour, the pitcher tilt must keep $\theta_5$ away from $0$ and $\pi$.
+
+\subsubsection{Implementation and Verification}
+\texttt{ur5\_kinematics\_node.py} publishes $w(\mathbf q)$ from \texttt{/joint\_states}, warns when 
+$w<10^{-3}$\,m$^3$, and returns the closest IK solution for target poses in \texttt{base}. The unit 
+tests in \texttt{test\_kinematics.py} confirm, over 300 random configurations, that every IK branch 
+reproduces the target pose to within $10^{-8}$ and that Eq.~\eqref{eq:manip} matches 
+$\sqrt{\det(JJ^T)}$ to within $10^{-10}$.
+
+\subsection{Dynamic Model with Time-Varying Payload}
+
+\subsection{Controller}
+% TODO: controller (jingxuan)
+A Jacobian-based Cartesian position controller
+is implemented to control the UR5 end-effector.
+The desired Cartesian velocity is calculated
+using proportional feedback:
+\begin{equation}
+    \mathbf{v}_d =
+    K_p(\mathbf{p}_d-\mathbf{p}).
+\end{equation}
+The corresponding joint velocities are computed
+using damped least squares:
+\begin{equation}
+    \dot{\mathbf{q}} =
+    J_v^T(J_vJ_v^T+\lambda^2I)^{-1}
+    \mathbf{v}_d,
+\end{equation}
+where $J_v$ is the translational Jacobian and
+$\lambda$ is the damping factor. The resulting
+joint velocity commands are sent to Gazebo
+through \texttt{ros2\_control}.
+
+
+%==========================================================
+\begin{thebibliography}{1}
+
+    \bibitem{kebria2016}
+    P.~M. Kebria, S.~Al-Wais, H.~Abdi, and S.~Nahavandi, ``Kinematic and dynamic modelling of UR5 manipulator,'' in \emph{Proc. IEEE Int. Conf. Systems, Man, and Cybernetics (SMC)}, Budapest, Hungary, 2016, pp. 4229--4234.
+
+    \bibitem{schober2024}
+    D.~Schober, R.~G{\"u}ldenring, J.~Love, and L.~Nalpantidis, ``Vision-based robot manipulation of transparent liquid containers in a laboratory setting,'' arXiv:2404.16529, 2024.
+
+    \bibitem{luo2024}
+    X.~Luo, S.~Jin, H.-J. Huang, and W.~Yuan, ``An intelligent robotic system for perceptive pancake batter stirring and precise pouring,'' arXiv:2407.01755, 2024.
+
+    \bibitem{babaians2022}
+    E.~Babaians, T.~Sharma, M.~Karimi, S.~Sharifzadeh, and E.~Steinbach, ``PourNet: Robust robotic pouring through curriculum and curiosity-based reinforcement learning,'' in \emph{Proc. IEEE/RSJ Int. Conf. Intelligent Robots and Systems (IROS)}, Kyoto, Japan, 2022, pp. 9332--9339.
+
+\end{thebibliography}
+
+\end{document}
