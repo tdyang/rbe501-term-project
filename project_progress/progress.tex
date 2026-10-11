@@ -240,8 +240,44 @@ with the arm pointing straight up, is $\mathbf q_{\text{home}}=[0,-\tfrac{\pi}{2
 \end{table}
 
 \subsubsection{Jacobian}
+The geometric Jacobian maps joint velocities to
+the end-effector linear and angular velocities:
+\begin{equation}
+    \begin{bmatrix}
+        \mathbf{v}\\
+        \boldsymbol{\omega}
+    \end{bmatrix}
+    = J(\mathbf{q})\dot{\mathbf{q}}.
+\end{equation}
+For each revolute joint, the Jacobian column is
+\begin{equation}
+    J_i =
+    \begin{bmatrix}
+        \mathbf{z}_{i-1}\times
+        (\mathbf{p}_e-\mathbf{p}_{i-1})\\
+        \mathbf{z}_{i-1}
+    \end{bmatrix}.
+\end{equation}
+The Jacobian is implemented in
+\texttt{kinematics.py} and used for
+Cartesian velocity control.
 
 \subsubsection{Forward Kinematics}
+Forward kinematics computes the end-effector
+pose from the joint configuration using the
+product-of-exponentials formulation:
+\begin{equation}
+    T(\mathbf{q}) =
+    e^{[\mathcal{S}_1]\theta_1}
+    \cdots
+    e^{[\mathcal{S}_6]\theta_6}M.
+\end{equation}
+Here, $\mathcal{S}_i$ represents the screw
+axis of joint $i$, and $M$ is the home
+configuration of the end-effector.
+The resulting transformation provides the
+tool position and orientation relative to
+the robot base.
 
 \subsubsection{Inverse Kinematics}
 \texttt{solve\_ik()} implements the closed-form solution of~\cite{kebria2016}. For a 
@@ -295,6 +331,26 @@ $\sqrt{\det(JJ^T)}$ to within $10^{-10}$.
 
 \subsection{Controller}
 % TODO: controller (jingxuan)
+A Jacobian-based Cartesian position controller
+is implemented to control the UR5 end-effector.
+The desired Cartesian velocity is calculated
+using proportional feedback:
+\begin{equation}
+    \mathbf{v}_d =
+    K_p(\mathbf{p}_d-\mathbf{p}).
+\end{equation}
+The corresponding joint velocities are computed
+using damped least squares:
+\begin{equation}
+    \dot{\mathbf{q}} =
+    J_v^T(J_vJ_v^T+\lambda^2I)^{-1}
+    \mathbf{v}_d,
+\end{equation}
+where $J_v$ is the translational Jacobian and
+$\lambda$ is the damping factor. The resulting
+joint velocity commands are sent to Gazebo
+through \texttt{ros2\_control}.
+
 
 %==========================================================
 \begin{thebibliography}{1}
