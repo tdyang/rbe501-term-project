@@ -1,0 +1,14 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.jj": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/progress.aux": true,
+        "**/progress.log": true,
+        "**/progress.gz": true,
+        "**/progress.out": true
+    }
+}
