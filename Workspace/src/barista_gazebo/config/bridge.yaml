@@ -1,0 +1,37 @@
+# ros_gz_bridge topics, DetachableJoint attach/detach commands and object poses
+
+- ros_topic_name: /cup/attach
+  gz_topic_name: /cup/attach
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /cup/detach
+  gz_topic_name: /cup/detach
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /pitcher/attach
+  gz_topic_name: /pitcher/attach
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /pitcher/detach
+  gz_topic_name: /pitcher/detach
+  ros_type_name: std_msgs/msg/Empty
+  gz_type_name: gz.msgs.Empty
+  direction: ROS_TO_GZ
+
+- ros_topic_name: /model/cup/pose
+  gz_topic_name: /model/cup/pose
+  ros_type_name: tf2_msgs/msg/TFMessage
+  gz_type_name: gz.msgs.Pose_V
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /model/pitcher/pose
+  gz_topic_name: /model/pitcher/pose
+  ros_type_name: tf2_msgs/msg/TFMessage
+  gz_type_name: gz.msgs.Pose_V
+  direction: GZ_TO_ROS
