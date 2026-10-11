@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{cite}
 \usepackage{tikz}
+\usepackage{float}
 \usetikzlibrary{arrows.meta,positioning}
 
 \begin{document}
@@ -120,19 +121,19 @@ Gazebo and examine manipulability and singularities along the trajectory.
 \label{sec:method}
 %==========================================================
 \subsection{Robot Sequence}
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\columnwidth]{gazebo.png}
+    \caption{Gazebo sim: UR5 Arm at home position on cafe table with mug and pitcher within reach.}
+    \label{fig:arm_gazebo}
+\end{figure}
+
 The test sequence is a complete beverage-preparation task in which the arm
 carries three different payloads: an empty mug, a pitcher whose mass
-decreases during the pour, and a filled mug. The Gazebo workspace consists of a
+decreases during the pour, and a filled mug. The Gazebo workspace, Figure \ref{fig:arm_gazebo}, consists of a
 table holding the mug, the pitcher of coffee, and a scale. Starting from a
 fixed home configuration clear of the table, the arm performs the following
 steps:
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.5\textwidth]{gazebo.png}
-    \caption{Gazebo sim: UR5 Arm at home position on cafe table with mug and pitcher within reach.}
-    \label{fig:my_image_label}
-\end{figure}
 
 \begin{enumerate}
     \item \textit{Mug pick-up:} the camera localizes the mug
@@ -144,11 +145,11 @@ steps:
           mass.
     \item \textit{Pour:} the arm positions the pitcher above the mug and tilts
           it. Throughout the pour, the payload mass estimated from the wrist
-          sensor is passed to ends when the
+          sensor is passed to the controller. The pour ends when the
           scale reports the target mass, at which point the arm returns the
           pitcher upright.
     \item \textit{Pitcher return:} the arm sets the empty pitcher down on the
-          table and releases
+          table and releases it.
     \item \textit{Serving:} the arm grasps the filled mug and places it at a
           serving location.
 \end{enumerate}
@@ -181,7 +182,7 @@ stages:
             encoders report the arm's joint positions and velocities.
 \end{enumerate}
 
-\begin{figure}[t]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
   font=\footnotesize,
@@ -225,7 +226,7 @@ the UR controller; Kebria et al.~\cite{kebria2016} list them as positive, which 
 arm. Frames $\{0\}$ and $\{6\}$ are the ROS \texttt{base} and \texttt{tool0} frames. The home position, 
 with the arm pointing straight up, is $\mathbf q_{\text{home}}=[0,-\tfrac{\pi}{2},0,-\tfrac{\pi}{2},0,0]^T$.
 
-\begin{table}[t]
+\begin{table}[H]
     \caption{UR5 DH parameters (\texttt{ur5\_params.py})}
     \label{tab:dh}
     \centering
