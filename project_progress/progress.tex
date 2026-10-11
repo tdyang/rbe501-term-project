@@ -122,12 +122,18 @@ Gazebo and examine manipulability and singularities along the trajectory.
 \subsection{Robot Sequence}
 The test sequence is a complete beverage-preparation task in which the arm
 carries three different payloads: an empty mug, a pitcher whose mass
-decreases during the pour, and a filled mug. The workspace consists of a
+decreases during the pour, and a filled mug. The Gazebo workspace consists of a
 table holding the mug, the pitcher of coffee, and a scale. Starting from a
 fixed home configuration clear of the table, the arm performs the following
 steps:
 
-[\textbf{INSERT GAZEBO IMAGES}]
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.5\textwidth]{gazebo.png}
+    \caption{Gazebo sim: UR5 Arm at home position on cafe table with mug and pitcher within reach.}
+    \label{fig:my_image_label}
+\end{figure}
+
 \begin{enumerate}
     \item \textit{Mug pick-up:} the camera localizes the mug
           and the arm grasps it.
