@@ -19,6 +19,7 @@ setup(
     entry_points={
         'console_scripts': [
             'ur5_kinematics_node = barista_control.ur5_kinematics_node:main',
+            'cartesian_controller = barista_control.controller:main',
         ],
     },
 )

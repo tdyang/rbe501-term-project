@@ -5,6 +5,7 @@
     <arg name="ur_type" value="$(var ur_type)"/>
     <arg name="description_file" value="$(find-pkg-share barista_gazebo)/urdf/barista_gz.urdf.xacro"/>
     <arg name="world_file" value="$(find-pkg-share barista_gazebo)/worlds/barista_cafe.sdf --gui-config $(find-pkg-share barista_gazebo)/config/gui.config"/>
+    <arg name="initial_joint_controller" value="forward_velocity_controller"/>
   </include>
 
   <!-- Load the ros gazebo bridge -->
