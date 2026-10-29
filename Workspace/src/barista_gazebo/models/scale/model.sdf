@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<sdf version="1.11">
+  <!-- Kitchen scale: plate on a base, F/T sensor in the joint between them.
+       /scale/wrench force.z = (m_plate + m_load) g, so m_load = f_z / g - 0.2 kg
+       (after the plate settles, ~0.5 s). -->
+  <model name="scale">
+    <joint name="fixed_to_world" type="fixed">
+      <parent>world</parent>
+      <child>base</child>
+    </joint>
+
+    <link name="base">
+      <pose>0 0 0.01 0 0 0</pose>
+      <inertial><mass>1.0</mass></inertial>
+      <collision name="collision">
+        <geometry><box><size>0.16 0.16 0.02</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>0.16 0.16 0.02</size></box></geometry>
+        <material><ambient>0.2 0.2 0.2 1</ambient><diffuse>0.2 0.2 0.2 1</diffuse></material>
+      </visual>
+    </link>
+
+    <link name="plate">
+      <pose>0 0 0.025 0 0 0</pose>
+      <inertial>
+        <mass>0.2</mass>
+        <inertia><ixx>4.3e-4</ixx><iyy>4.3e-4</iyy><izz>8.5e-4</izz></inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry><box><size>0.16 0.16 0.01</size></box></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>0.16 0.16 0.01</size></box></geometry>
+        <material><ambient>0.8 0.8 0.8 1</ambient><diffuse>0.8 0.8 0.8 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- stiff spring (0.1 mm/kg), like a real load cell; a fixed joint reports no contact load -->
+    <joint name="load_cell" type="prismatic">
+      <parent>base</parent>
+      <child>plate</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit><lower>-0.005</lower><upper>0.005</upper></limit>
+        <dynamics><spring_stiffness>1e5</spring_stiffness><damping>500</damping></dynamics>
+      </axis>
+      <sensor name="load_cell" type="force_torque">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <topic>/scale/wrench</topic>
+        <force_torque>
+          <frame>child</frame>
+          <measure_direction>parent_to_child</measure_direction>
+        </force_torque>
+      </sensor>
+    </joint>
+  </model>
+</sdf>

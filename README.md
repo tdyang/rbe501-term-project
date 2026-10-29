@@ -43,3 +43,19 @@ Launch the Gazebo sim:
 ```bash
 ros2 launch barista_gazebo barista_sim.launch.xml
 ```
+
+Launch with torque control (computed-torque `dynamic_controller` with the payload model):
+```bash
+ros2 launch barista_gazebo barista_sim.launch.xml initial_joint_controller:=forward_effort_controller
+```
+Send it a `trajectory_msgs/JointTrajectory` on `/dynamic_controller/joint_trajectory` and the
+grasped object's `geometry_msgs/Inertia` (tool0 frame) on `/dynamic_controller/payload`.
+See the docstring of `barista_control/dynamic_controller.py` for an example.
+
+Simulated sensors (bridged by `config/sensors_bridge.yaml`):
+
+| Topic | Type | Sensor |
+|---|---|---|
+| `/wrist_ft` | `geometry_msgs/WrenchStamped` | F/T in `wrist_3_joint`, tool0 frame; includes wrist_3_link (0.1879 kg) |
+| `/scale/wrench` | `geometry_msgs/WrenchStamped` | scale load cell; `force.z / 9.8 - 0.2` = load [kg] |
+| `/camera/{image,depth_image,points,camera_info}` | `sensor_msgs/...` | overhead RGB-D, frame `camera_optical_frame` (TF from `world`) |

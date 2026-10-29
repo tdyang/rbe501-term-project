@@ -7,10 +7,12 @@
 
   <xacro:include filename="$(find barista_description)/urdf/barista_macro.xacro"/>
   <xacro:include filename="$(find ur_simulation_gz)/urdf/ur_gz.ros2_control.xacro"/>
+  <xacro:include filename="$(find barista_gazebo)/urdf/barista_sensors.xacro"/>
 
   <xacro:barista name="$(arg name)" ur_type="$(arg ur_type)" tf_prefix="$(arg tf_prefix)"/>
 
   <xacro:ur_ros2_control name="$(arg name)" tf_prefix="$(arg tf_prefix)"/>
+  <xacro:barista_sensors tf_prefix="$(arg tf_prefix)"/>
 
   <gazebo>
     <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">

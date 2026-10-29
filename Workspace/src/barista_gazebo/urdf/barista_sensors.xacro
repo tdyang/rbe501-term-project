@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro">
+  <!-- Wrist F/T sensor in wrist_3_joint: wrench the wrist applies to wrist_3_link plus
+       anything attached to it, in the wrist_3_link (= tool0) frame. The force includes
+       wrist_3_link's own 0.1879 kg, so subtract it (or tare) for the payload mass. -->
+  <xacro:macro name="barista_sensors" params="tf_prefix">
+    <gazebo reference="${tf_prefix}wrist_3_joint">
+      <sensor name="wrist_ft" type="force_torque">
+        <always_on>true</always_on>
+        <update_rate>500</update_rate>
+        <topic>/wrist_ft</topic>
+        <force_torque>
+          <frame>child</frame>
+          <measure_direction>parent_to_child</measure_direction>
+        </force_torque>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>
