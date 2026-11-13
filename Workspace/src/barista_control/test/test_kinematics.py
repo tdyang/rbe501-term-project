@@ -6,8 +6,8 @@ built straight from the DH table.
 import numpy as np
 import pytest
 
-from barista_control import ur5_params as P
-from barista_control.kinematics import (
+from barista_control.model import ur5_params as P
+from barista_control.model.kinematics import (
     forward_kinematics, jacobian, solve_ik, solve_ik_closest, wrap_to_pi,
     manipulability, yoshikawa, singularities)
 

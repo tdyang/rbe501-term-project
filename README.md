@@ -50,7 +50,7 @@ ros2 launch barista_gazebo barista_sim.launch.xml initial_joint_controller:=forw
 ```
 Send it a `trajectory_msgs/JointTrajectory` on `/dynamic_controller/joint_trajectory` and the
 grasped object's `geometry_msgs/Inertia` (tool0 frame) on `/dynamic_controller/payload`.
-See the docstring of `barista_control/dynamic_controller.py` for an example.
+See the docstring of `barista_control/nodes/dynamic_controller.py` for an example.
 
 Simulated sensors (bridged by `config/sensors_bridge.yaml`):
 

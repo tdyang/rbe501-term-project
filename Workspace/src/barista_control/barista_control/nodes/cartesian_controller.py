@@ -4,8 +4,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray
-from barista_control import ur5_params as P
-from barista_control.kinematics import forward_kinematics, jacobian
+from barista_control.model import ur5_params as P
+from barista_control.model.kinematics import forward_kinematics, jacobian
 
 
 class CartesianController(Node):

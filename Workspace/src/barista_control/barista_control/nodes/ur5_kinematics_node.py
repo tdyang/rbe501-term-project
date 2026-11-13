@@ -27,8 +27,8 @@ from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64
 
-from barista_control import ur5_params as P
-from barista_control.kinematics import (
+from barista_control.model import ur5_params as P
+from barista_control.model.kinematics import (
     forward_kinematics, jacobian, solve_ik_closest,
     manipulability, yoshikawa, inverse_condition, singularities)
 

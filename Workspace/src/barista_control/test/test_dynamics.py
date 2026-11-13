@@ -8,10 +8,10 @@ import os
 import numpy as np
 import pytest
 
-from barista_control import ur5_params as P
-from barista_control.dynamics import UR5Dynamics, _rot
-from barista_control.kinematics import forward_kinematics, jacobian
-from barista_control.payload import GRAVITY, Body, MassEstimator, Pitcher
+from barista_control.model import ur5_params as P
+from barista_control.model.dynamics import UR5Dynamics, _rot
+from barista_control.model.kinematics import forward_kinematics, jacobian
+from barista_control.model.payload import GRAVITY, Body, MassEstimator, Pitcher
 
 URDF = os.path.join(os.path.dirname(__file__), "ur5_test.urdf")
 RNG = np.random.default_rng(1)

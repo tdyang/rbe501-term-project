@@ -18,9 +18,9 @@ setup(
     license='TODO',
     entry_points={
         'console_scripts': [
-            'ur5_kinematics_node = barista_control.ur5_kinematics_node:main',
-            'cartesian_controller = barista_control.controller:main',
-            'dynamic_controller = barista_control.dynamic_controller:main',
+            'ur5_kinematics_node = barista_control.nodes.ur5_kinematics_node:main',
+            'cartesian_controller = barista_control.nodes.cartesian_controller:main',
+            'dynamic_controller = barista_control.nodes.dynamic_controller:main',
         ],
     },
 )

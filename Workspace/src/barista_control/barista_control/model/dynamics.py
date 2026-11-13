@@ -16,8 +16,8 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-from barista_control import ur5_params as P
-from barista_control.payload import GRAVITY, Body
+from barista_control.model import ur5_params as P
+from barista_control.model.payload import GRAVITY, Body
 
 
 # ---------------------------------------------------------------------------

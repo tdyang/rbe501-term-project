@@ -34,11 +34,11 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64MultiArray, String
 from trajectory_msgs.msg import JointTrajectory
 
-from barista_control import ur5_params as P
-from barista_control.computed_torque import ComputedTorqueController
-from barista_control.dynamics import UR5Dynamics
-from barista_control.payload import Body
-from barista_control.trajectory import Spline
+from barista_control.model import ur5_params as P
+from barista_control.control.computed_torque import ComputedTorqueController
+from barista_control.model.dynamics import UR5Dynamics
+from barista_control.model.payload import Body
+from barista_control.planning.trajectory import Spline
 
 
 def spline_from_msg(msg, now, current):

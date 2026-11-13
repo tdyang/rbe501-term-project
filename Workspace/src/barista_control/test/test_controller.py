@@ -9,11 +9,11 @@ import os
 import numpy as np
 import pytest
 
-from barista_control import ur5_params as P
-from barista_control.computed_torque import ComputedTorqueController
-from barista_control.dynamics import UR5Dynamics
-from barista_control.payload import Body, Pitcher
-from barista_control.trajectory import Spline
+from barista_control.model import ur5_params as P
+from barista_control.control.computed_torque import ComputedTorqueController
+from barista_control.model.dynamics import UR5Dynamics
+from barista_control.model.payload import Body, Pitcher
+from barista_control.planning.trajectory import Spline
 
 URDF = os.path.join(os.path.dirname(__file__), "ur5_test.urdf")
 RNG = np.random.default_rng(2)
@@ -159,7 +159,7 @@ def test_steady_state_error_matches_prediction():
 def test_spline_from_msg_reorders_joints_and_blends_in():
     pytest.importorskip("trajectory_msgs")
     from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-    from barista_control.dynamic_controller import spline_from_msg
+    from barista_control.nodes.dynamic_controller import spline_from_msg
 
     goal = Q_POUR + 0.2
     pt = JointTrajectoryPoint(positions=list(goal[::-1]))
