@@ -32,17 +32,17 @@
     
     <include>
       <uri>model://cup</uri>
-      <pose>-1 -0.3 0.751 0 0 3.14</pose>
+      <pose>-0.6 -0.3 0.751 0 0 3.14</pose>
     </include>
 
     <include>
       <uri>model://pitcher</uri>
-      <pose>-1 0.3 0.751 0 0 3.14</pose>
+      <pose>-0.6 0.3 0.751 0 0 3.14</pose>
     </include>
 
     <include>
       <uri>model://scale</uri>
-      <pose>-0.55 -0.35 0.75 0 0 0</pose>
+      <pose>-0.55 -0.8 0.75 0 0 0</pose>
     </include>
 
     <include>
